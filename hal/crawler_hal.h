@@ -17,6 +17,11 @@ class CrawlerHAL
 private:
     SerialSyncLink *comm;
 
+    char *allocBuffer(int size)
+    {
+        return (char *)malloc(sizeof(char) * size);
+    }
+
 public:
     CrawlerHAL()
     {
@@ -28,16 +33,11 @@ public:
         delete comm;
     }
 
-    char *allocBuffer(int size)
-    {
-        return (char *)malloc(sizeof(char) * size);
-    }
-
     bool setEngineForward(unsigned char powerAccell)
     {
         if (powerAccell == 0)
             return setEngineStop();
-            
+
 #ifdef DEBUG
         printf("setEngineForward(): driver: %d, cmd: %d, accell: %d\n", BACK_WHEELDRIVER, WHEELDRIVER_SET_FORWARD_PW, powerAccell);
 #endif

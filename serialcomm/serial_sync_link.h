@@ -81,30 +81,6 @@ public:
         delete comm;
     }
 
-    // char * buildMessage(int num_params, int params...)
-    // {
-    //     va_list args;
-    //     va_start(args, params);
-
-    //     char *msg = (char *)malloc(sizeof(char) * (num_params + 1));
-
-    //     int i = 0;
-    //     while (i++ < num_params)
-    //     {
-    //         msg[i] = (char)va_arg(args, int);
-    //     }
-    //     va_end(args);
-
-    //     printf("built msg: [");
-    //     for (int i = 0; i < num_params; i++)
-    //     {
-    //         printf(" %d", msg[i]);
-    //     }
-    //     printf("]\n");
-
-    //     return msg;
-    // }
-
     ResponseData *request(int num_params, char *message)
     {
         time_ms = 0;
@@ -138,42 +114,6 @@ public:
 #endif
         return nullptr;
     }
-
-    /*
-        ResponseData *request(unsigned char deviceId, int num_params, int params...)
-        {
-            comm->clearRcv();
-            lastFrame = computeNextFrameId();
-            comm->write(lastFrame);
-            comm->write(deviceId);
-
-            va_list args;
-            va_start(args, params);
-
-            while (num_params-- > 1)
-            {
-                int p = va_arg(args, int);
-                comm->write((char)p);
-            }
-            va_end(args);
-
-            comm->sendData();
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-            if (!checkAck(deviceId, lastFrame))
-            {
-                printf("NO ACK!!\n");
-                return nullptr;
-            }
-
-            printf("ACK!!\n");
-
-            ResponseData *resp = new ResponseData();
-            resp->data = comm->copy();
-            resp->size = comm->receivedDataSize();
-            comm->clearRcv();#ifdef DEBUG
-            return resp;
-        } */
 };
 
 #endif

@@ -29,8 +29,6 @@
 #include <mutex>
 #include <sys/ioctl.h>
 
-#define DEBUG 1
-
 class ISerialCommunication
 {
 public:
