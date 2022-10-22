@@ -100,7 +100,7 @@ public:
                 return;
             }
 
-            rcvLastId = rcvBuffer[1];
+            rcvLastId = rcvBuffer[0];
         }
     }
 

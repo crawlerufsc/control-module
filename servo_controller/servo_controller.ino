@@ -1,6 +1,7 @@
 #include "servo_device.h"
 #include "timeout_controller.h"
-#include "serial_comm.h"
+//#include "serial_comm.h"
+#include "usb_serial_comm.h"
 #include "led_controller.h"
 #include "test_device.h"
 
@@ -14,10 +15,10 @@ uint8_t state;
 #define STATE_IDLE 2
 
 // Use this for USB cable Serial communication
-// UsbSerialCommunication comm;
+UsbSerialCommunication comm;
 
 // Use this for wiring Serial communication
-SerialCommunication comm(0, 1);
+//SerialCommunication comm(0, 1);
 
 TimeoutController tc;
 LedController led(LED_BUILTIN);
