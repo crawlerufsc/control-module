@@ -17,23 +17,17 @@ find_path(WIRINGPI_INCLUDE_DIRS NAMES wiringPi.h)
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(wiringPi DEFAULT_MSG WIRINGPI_LIBRARIES WIRINGPI_INCLUDE_DIRS)
 
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
 
 SET(TARGET_H
-    ../serialcomm/serial_comm_pi.h
-    ../serialcomm/serial_sync_link.h
-    ../serialcomm/serial_link.h
-    ../hal/crawler_hal.h
+    ../../serialcomm/serial_comm_pi.h
+    ../../serialcomm/serial_sync_link.h
+    ../../hal/crawler_hal.h
 )
 
 add_executable(
-    unittest
-    control_tests.cpp
-    # serialcomm/serial_comm_pi_test.cpp
-    # serialcomm/serial_sync_link_test.cpp
-    serialcomm/serial_link_test.cpp
+    sensortest
+    crawler_sensors_test.cpp
 )
 
 # link my-recognition to jetson-inference library
-target_link_libraries(unittest ${GTEST_LIBRARIES}  ${WIRINGPI_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(sensortest  ${WIRINGPI_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})

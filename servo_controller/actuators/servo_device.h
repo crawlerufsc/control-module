@@ -27,7 +27,7 @@ private:
 
 public:
   ServoDevice(uint8_t deviceCode, uint8_t pwmDirectPin, uint8_t pwmReversePin, uint8_t enDirectPin, uint8_t enReversePin,
-                  uint8_t overloadDirectPin, uint8_t overloadReversePin)
+              uint8_t overloadDirectPin, uint8_t overloadReversePin)
     : Device(deviceCode) {
 
     this->pwmDirectPin = pwmDirectPin;
@@ -37,39 +37,40 @@ public:
     this->overloadDirectPin = overloadDirectPin;
     this->overloadReversePin = overloadReversePin;
     this->currentPower = 0;
+  }
 
+  ~ServoDevice() {}
+
+  void initialize() {
     pinMode(this->pwmDirectPin, OUTPUT);
     pinMode(this->pwmReversePin, OUTPUT);
     pinMode(this->enDirectPin, OUTPUT);
     pinMode(this->enReversePin, OUTPUT);
     pinMode(this->overloadDirectPin, INPUT);
     pinMode(this->overloadReversePin, INPUT);
+    
+    digitalWrite(this->enDirectPin, HIGH);
+    digitalWrite(this->enReversePin, HIGH);
   }
-
-  ~ServoDevice() {}
 
   void setStop() {
     this->currentPower = 0;
-    digitalWrite(enReversePin, LOW);
-    digitalWrite(enDirectPin, LOW);
     analogWrite(pwmDirectPin, 0);
     analogWrite(pwmReversePin, 0);
   }
 
   void setForward() {
     setStop();
-    digitalWrite(enDirectPin, HIGH);
     this->headingForward = true;
   }
 
   void setBackward() {
-    digitalWrite(enReversePin, HIGH);
+    setStop();
     this->headingForward = false;
   }
 
   void setPower(uint8_t power) {
     uint8_t p = power;
-    if (p < 0) p = 0;
     if (p > 255) p = 255;
 
     if (this->headingForward)
@@ -79,12 +80,12 @@ public:
   }
 
   bool readCommand(AsyncCommunication &comm) {
-    uint8_t deviceId = comm.read(1);
+    uint8_t deviceId = comm.read(2);
 
     if (!checkIsCommandToThisDevice(deviceId)) return false;
 
-    uint8_t cmd = comm.read(2);
-    uint8_t powerValue = comm.read(3);
+    uint8_t cmd = comm.read(3);
+    uint8_t powerValue = comm.read(4);
 
     switch (cmd) {
       case WHEELDRIVER_STOP:

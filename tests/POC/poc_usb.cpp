@@ -23,7 +23,7 @@ private:
 public:
     SerialComm(const char *device)
     {
-        deviceId = serialOpen(device, 9600);
+        deviceId = serialOpen(device, 115200);
         if (deviceId == -1)
         {
             fprintf(stderr, "unable to open device %s: %s\n", device, strerror(errno));
@@ -44,7 +44,6 @@ public:
 
     void writeStr(char *val)
     {
-
         serialPuts(deviceId, val);
         serialFlush(deviceId);
     }
@@ -59,7 +58,7 @@ public:
             {
                 char ch = serialGetchar(deviceId);
                 rcvBuffer[rcvBufferSize++] = ch;
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                //std::this_thread::sleep_for(std::chrono::milliseconds(2));
             }
         }
     }
@@ -97,12 +96,15 @@ void *rcvfunc(void *arg)
         comm.receiveData();
         if (comm.hasData())
         {
+            printf ("[");
             for (int i = 0; i < comm.receivedDataSize(); i++)
-                printf("pos %i=%d\n", i, comm.read(i));
+                printf(" %d", comm.read(i));
+            printf (" ]\n");
             comm.clearRcv();
         }
 
-        sleep(1);
+        //sleep(1);
+
     }
 }
 
@@ -111,7 +113,7 @@ int main()
 
     char *msg = (char *)malloc(sizeof(char) * 7);
     msg[0] = 32;
-    msg[1] = 7;
+    msg[1] = 8;
     msg[2] = 1;
     msg[3] = 1;
     msg[4] = 3;
@@ -124,6 +126,7 @@ int main()
     {
         printf("sending test command\n");
         comm.writeStr(msg);
-        sleep(2);
+        //sleep(2);
+          std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }

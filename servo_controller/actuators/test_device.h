@@ -18,7 +18,7 @@ public:
     TestDevice() : Device(TEST_DEVICE_ID) {}
 
     bool readCommand(AsyncCommunication &comm) {
-        return checkIsCommandToThisDevice(comm.read(1));
+        return checkIsCommandToThisDevice(comm.read(2));
     }
 };
 

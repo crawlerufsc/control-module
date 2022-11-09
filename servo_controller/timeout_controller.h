@@ -4,21 +4,23 @@
 #include <stdint.h>
 #include <Arduino.h>
 
-class TimeoutController {
+class TimeoutController
+{
 private:
   unsigned long timeStamp;
 
 public:
-
-  TimeoutController() {
+  TimeoutController()
+  {
     timeStamp = 0;
   }
- 
-  bool execEvery(unsigned long time_ms) {
 
+  bool checkTimeout(unsigned long time_ms)
+  {
     unsigned long current = millis();
 
-    if (current - timeStamp >= time_ms) {
+    if (current - timeStamp >= time_ms)
+    {
       timeStamp = current;
       return true;
     }

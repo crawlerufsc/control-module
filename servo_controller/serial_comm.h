@@ -10,7 +10,13 @@
 #define RCV_BUFFER_SIZE 20
 #define SND_BUFFER_SIZE 20
 
+#define PROTOCOL_FRAME_TYPE_DATA 1
+#define PROTOCOL_FRAME_TYPE_ACK 2
+#define PROTOCOL_ACK 1
+#define PROTOCOL_NACK 2
+
 #include "async_comm.h"
+#include "protocol.h"
 
 class SerialCommunication : public AsyncCommunication
 {
@@ -18,7 +24,7 @@ private:
     SoftwareSerial *serialPort;
     char rcvBuffer[RCV_BUFFER_SIZE];
     char sndBuffer[SND_BUFFER_SIZE];
-    uint8_t rcvLastId;
+    uint8_t lastFrameId;
     uint8_t rcvBufferSize;
     uint8_t sndBufferSize;
 
@@ -37,10 +43,15 @@ private:
         return msg;
     }
 
+    char serialRead() {
+      return serialPort->read();
+      delay(SERIAL_RCV_WAIT_DELAY_ms);
+    }
+
 public:
-    SerialCommunication(uint8_t rxPin, uint8_t txPin)
+    SerialCommunication(int rx, int tx)
     {
-        serialPort = new SoftwareSerial(rxPin, txPin);
+        serialPort = new SoftwareSerial(rx, tx);
         rcvBufferSize = 0;
         sndBufferSize = 0;
     }
@@ -62,44 +73,42 @@ public:
 
     void receiveData() override
     {
+        rcvBufferSize = 0;
         char ch;
         bool valid = false;
+
         serialPort->listen();
         delay(SERIAL_RCV_WAIT_DELAY_ms);
-        if (serialPort->available() > 0)
+        while (serialPort->available() > 0)
+        {
+            if (serialRead() == MSG_START)
+            {
+                valid = true;
+                break;
+            }
+        }
+
+        if (!valid)
         {
             rcvBufferSize = 0;
-
-            if (serialPort->read() != MSG_START)
-            {
-                clearReceiveBuffer();
-                return;
-            }
-
-            delay(SERIAL_RCV_WAIT_DELAY_ms);
-            while (serialPort->available() > 0 && rcvBufferSize < RCV_BUFFER_SIZE)
-            {
-                ch = serialPort->read();
-                if (ch == MSG_END)
-                {
-                    valid = true;
-                    break;
-                }
-
-                rcvBuffer[rcvBufferSize++] = ch;
-                delay(SERIAL_RCV_WAIT_DELAY_ms);
-            }
-
-            clearReceiveBuffer();
-
-            if (!valid)
-            {
-                rcvBufferSize = 0;
-                return;
-            }
-
-            rcvLastId = rcvBuffer[0];
+            return;
         }
+
+        valid = false;
+
+        while (!valid && serialPort->available() > 0 && rcvBufferSize < RCV_BUFFER_SIZE)
+        {
+            ch = serialRead();
+            if (ch == MSG_END)
+                valid = true;
+            else
+                rcvBuffer[rcvBufferSize++] = ch;
+        }
+
+        if (!valid)
+            rcvBufferSize = 0;
+
+        lastFrameId = rcvBuffer[0];
     }
 
     void sendData() override
@@ -107,12 +116,16 @@ public:
         if (sndBufferSize == 0)
             return;
 
+        if (serialPort->availableForWrite() < sndBufferSize)
+            return;
+
         char *msg = buildSendMessage();
         serialPort->write(msg);
-        delay(SERIAL_RCV_WAIT_DELAY_ms);
         free(msg);
+
         sndBufferSize = 0;
     }
+
     bool hasData() override
     {
         return rcvBufferSize > 0;
@@ -120,33 +133,33 @@ public:
 
     void ack() override
     {
-        write(rcvLastId);
+        write(lastFrameId);
+        write(PROTOCOL_FRAME_TYPE_ACK);
         write(MSG_ACK);
     }
 
     void nack() override
     {
-        write(rcvLastId);
+        write(lastFrameId);
+        write(PROTOCOL_FRAME_TYPE_ACK);
         write(MSG_ERR);
     }
 
     bool isReady() override
     {
-        // if (serialPort == nullptr)
-        //     return (Serial);
-
         return true;
-    }
-
-    void clearReceiveBuffer() override
-    {
-        while (serialPort->available() > 0)
-            serialPort->read();
     }
 
     void clear() override
     {
+        while (serialPort->available() > 0)
+            serialPort->read();
+
         sndBufferSize = 0;
+        rcvBufferSize = 0;
+    }
+
+    void clearReceiveBuffer() override {
         rcvBufferSize = 0;
     }
 };

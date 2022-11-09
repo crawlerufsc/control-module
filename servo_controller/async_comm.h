@@ -5,11 +5,6 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#define MSG_ACK 1
-#define MSG_ERR 2
-#define MSG_START 32
-#define MSG_END 31
-
 class AsyncCommunication
 {
 public:
@@ -23,8 +18,8 @@ public:
     virtual void ack() = 0;
     virtual void nack() = 0;
     virtual bool isReady() = 0;
-    virtual void clearReceiveBuffer() = 0;
     virtual void clear() = 0;
+    virtual void clearReceiveBuffer() = 0;
 };
 
 #endif

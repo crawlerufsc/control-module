@@ -3,16 +3,17 @@
 #include <termios.h>
 #include <unistd.h>
 #include <string>
+#include "../../utils/filesystem.h"
 
 class DriveSetting
 {
 public:
-    int headingPower;
+    int headingAngle;
     int movingPower;
 
     DriveSetting()
     {
-        headingPower = 0;
+        headingAngle = 45;
         movingPower = 0;
     }
 };
@@ -23,12 +24,12 @@ char menu(DriveSetting &settings, bool lastAck)
     std::string ms;
     std::string ack;
 
-    if (settings.headingPower >= 0)
+    if (settings.headingAngle >= 45)
         hs = "[+]";
     else
         hs = "[-]";
 
-    if (settings.movingPower >= 0)
+    if (settings.headingAngle >= 0)
         ms = "[+]";
     else
         ms = "[-]";
@@ -45,7 +46,7 @@ char menu(DriveSetting &settings, bool lastAck)
     printf("                  (s)       backward pwr++\n");
     printf("\n\n");
     printf(">>>> moving wheeldrive: H: %s, power: %d\n", ms.c_str(), settings.movingPower);
-    printf("<--> heading wheeldrive: H: %s, power: %d\n", hs.c_str(), settings.headingPower);
+    printf("<--> heading wheeldrive: H: %s, angle: %d\n", hs.c_str(), settings.headingAngle);
     printf("\n\n");
     printf("last command status: %s\n", ack.c_str());
     printf("\n\n");
@@ -77,6 +78,12 @@ static struct termios oldt;
 
 int main(int argc, char **argv)
 {
+    if (!fileExists("/dev/ttyUSB0")) {
+        printf("/dev/ttyUSB0 not found" );
+        return 1;
+    }
+
+
     auto flags = setupTerminal();
     DriveSetting settings;
     CrawlerHAL hal;
@@ -92,27 +99,27 @@ int main(int argc, char **argv)
         switch (ch)
         {
         case 'w':
-            settings.movingPower++;
+            settings.movingPower+=25;
             if (settings.movingPower > 255)
                 settings.movingPower = 255;
             break;
         case 's':
-            settings.movingPower--;
+            settings.movingPower-=25;
             if (settings.movingPower < -255)
                 settings.movingPower = -255;
             break;
         case 'a':
-            settings.headingPower--;
-            if (settings.headingPower < -255)
-                settings.headingPower = -255;
+            settings.headingAngle-=5;
+            if (settings.headingAngle < 0)
+                settings.headingAngle = 0;
             break;
         case 'd':
-            settings.headingPower++;
-            if (settings.headingPower > 255)
-                settings.headingPower = 255;
+            settings.headingAngle+=5;
+            if (settings.headingAngle > 90)
+                settings.headingAngle = 90;
             break;
         case 'q':
-            settings.headingPower = 0;
+            settings.headingAngle = 45;
             settings.movingPower = 0;
             break;
         case 27:
@@ -128,12 +135,12 @@ int main(int argc, char **argv)
         if (settings.movingPower >= 0)
             lastAck = hal.setEngineForward(settings.movingPower);
         else 
-            lastAck = hal.setEngineBackward(settings.movingPower);
+            lastAck = hal.setEngineBackward(-settings.movingPower);
 
-        if (settings.headingPower >= 0)
-            lastAck = hal.setWheelRight(settings.headingPower);
-        else
-            lastAck = hal.setWheelLeft(settings.headingPower);
+        lastAck = hal.setWheelFrontAngle(settings.headingAngle);
+
+        lastAck = hal.setWheelBackAngle(settings.headingAngle);
+
     }
 
     restoreTerminal(flags);

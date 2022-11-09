@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <Arduino.h>
 
+#include "protocol.h"
+
 class Device
 {
 private:
@@ -13,6 +15,9 @@ protected:
   bool checkIsCommandToThisDevice(uint8_t code)
   {
     return deviceCode == code;
+  }
+  char getDeviceCode() {
+    return deviceCode;
   }
 
 public:

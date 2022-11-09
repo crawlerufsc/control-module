@@ -23,7 +23,7 @@ private:
 public:
     SerialComm(const char *device)
     {
-        deviceId = serialOpen(device, 9600);
+        deviceId = serialOpen(device, 115200);
         if (deviceId == -1)
         {
             fprintf(stderr, "unable to open device %s: %s\n", device, strerror(errno));
@@ -46,7 +46,7 @@ public:
     {
 
         serialPuts(deviceId, val);
-        serialFlush(deviceId);
+        //serialFlush(deviceId);
     }
 
     void receiveData()

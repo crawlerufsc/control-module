@@ -9,7 +9,7 @@
 //     system("socat -d -d pty,raw,echo=0,link=/tmp/vs1 pty,raw,echo=0,link=/tmp/vs2");
 // }
 
-TEST(SerialCommuncation, DummySerialSendReceive)
+TEST(SerialCommuncationTst, VirtualDeviceSerialSendReceive)
 {
     if (!fileExists("/tmp/vs1") || !fileExists("/tmp/vs2"))
     {
@@ -25,6 +25,7 @@ TEST(SerialCommuncation, DummySerialSendReceive)
 
     snd->write(32);
     snd->write(1);
+    snd->write(PROTOCOL_FRAME_TYPE_DATA);
 
     for (int i = 1; i <= 10; i++)
         snd->write(i);
@@ -35,7 +36,7 @@ TEST(SerialCommuncation, DummySerialSendReceive)
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     rcv->receiveData();
 
-    EXPECT_EQ(12, rcv->receivedDataSize());
+    EXPECT_EQ(13, rcv->receivedDataSize());
     // std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // delete virtualSerial;
@@ -46,6 +47,7 @@ TEST(SerialCommuncation, DummySerialSendReceive)
 bool sendTestMessage(SerialCommunication *comm, int frameId)
 {
     comm->write(frameId);
+    comm->write(PROTOCOL_FRAME_TYPE_DATA);
     comm->write(1);
     comm->write(1);
     comm->sendData();
@@ -56,7 +58,10 @@ bool sendTestMessage(SerialCommunication *comm, int frameId)
         printf("received result: [%d, %d]\n", comm->read(0), comm->read(1));
     }
 
-    bool p = (comm->read(0) == 1 && comm->read(1) == 1);
+    bool p = (comm->read(0) == frameId                    //
+              && comm->read(1) == PROTOCOL_FRAME_TYPE_ACK //
+              && comm->read(2) == 1                       //
+    );
     comm->clearRcv();
     return p;
 }
@@ -73,7 +78,7 @@ bool wakeUpArduino(SerialCommunication *comm)
     return false;
 }
 
-TEST(SerialCommuncation, ArduinoSerialSendReceive)
+TEST(SerialCommuncationTst, ArduinoSerialSendReceive)
 {
     const char *device = "/dev/ttyACM0";
     // const char *device = "/dev/ttyS0";
@@ -98,13 +103,14 @@ TEST(SerialCommuncation, ArduinoSerialSendReceive)
 
     arduino->write(frameId);
     arduino->write(deviceId);
+    arduino->write(PROTOCOL_FRAME_TYPE_DATA);
     arduino->write(command);
     // payload
     arduino->write(10);
     arduino->write(11);
     arduino->write(12);
     arduino->sendData();
-    //sleep(2);
+    // sleep(2);
 
     // int p = 0;
     // while (p < 20)
@@ -115,9 +121,10 @@ TEST(SerialCommuncation, ArduinoSerialSendReceive)
     // }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     arduino->receiveData();
-    EXPECT_EQ(2, arduino->receivedDataSize());
-    EXPECT_EQ(23, arduino->read(0));
-    EXPECT_EQ(1, arduino->read(1)); // ack
+    EXPECT_EQ(3, arduino->receivedDataSize());
+    EXPECT_EQ(frameId, arduino->read(0));
+    EXPECT_EQ(PROTOCOL_FRAME_TYPE_ACK, arduino->read(1));
+    EXPECT_EQ(1, arduino->read(2)); // ack
 
     delete arduino;
 }
