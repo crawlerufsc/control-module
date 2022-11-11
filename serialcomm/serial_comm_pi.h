@@ -15,6 +15,8 @@
 
 #define PROTOCOL_FRAME_TYPE_DATA 1
 #define PROTOCOL_FRAME_TYPE_ACK 2
+#define PROTOCOL_FRAME_TYPE_DATA_LIST 3
+
 #define PROTOCOL_ACK 1
 #define PROTOCOL_NACK 2
 
@@ -40,6 +42,7 @@ public:
     virtual void sendData() = 0;
     virtual bool hasData() = 0;
     virtual char read(unsigned int pos) = 0;
+    virtual float readF(unsigned int pos) = 0;
     virtual void write(unsigned char val) = 0;
     virtual char *copy() = 0;
     virtual unsigned int receivedDataSize() = 0;
@@ -47,6 +50,12 @@ public:
     virtual void clearRcv() = 0;
     virtual void clearSnd() = 0;
 };
+
+typedef union {
+  float fval;
+  char bval[4];
+} float_pack;
+
 
 class SerialCommunication : public ISerialCommunication
 {
@@ -184,6 +193,13 @@ public:
     char read(unsigned int pos) override
     {
         return rcvBuffer[pos];
+    }
+
+    float readF(unsigned int pos) override { 
+        float_pack p;
+        for (uint8_t i = 0; i < 4; i++)
+            p.bval[i] = rcvBuffer[pos++];
+        return p.fval;
     }
 
     void write(unsigned char val) override

@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 #include <Servo.h>
-
-#include "device.h"
-#include "serial_comm.h"
 #include <Arduino.h>
+
+#include "../device.h"
+#include "../async_comm.h"
 
 class SteeringDevice : public Device
 {
@@ -31,12 +31,12 @@ public:
     {
     }
 
-    void initialize()
+    void initialize() override
     {
         servo.attach(this->pwmDirection);
     }
 
-    bool readCommand(AsyncCommunication &comm)
+    bool readCommand(AsyncCommunication &comm) override
     {
         uint8_t deviceId = comm.read(2);
 

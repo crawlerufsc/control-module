@@ -2,7 +2,6 @@
 #define _DEVICE_H
 
 #include <stdint.h>
-#include <Arduino.h>
 
 #include "protocol.h"
 
@@ -16,7 +15,8 @@ protected:
   {
     return deviceCode == code;
   }
-  char getDeviceCode() {
+  char getDeviceCode()
+  {
     return deviceCode;
   }
 
@@ -25,6 +25,10 @@ public:
   {
     this->deviceCode = (char)deviceCode;
   }
+
+  virtual void initialize() = 0;
+
+  virtual bool readCommand(AsyncCommunication &comm) = 0;
 };
 
 #endif

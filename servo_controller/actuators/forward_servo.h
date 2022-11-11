@@ -2,11 +2,10 @@
 #define _SERVO_DEVICE_H
 
 #include <stdint.h>
-#include <SoftwareSerial.h>
-
-#include "device.h"
-#include "serial_comm.h"
 #include <Arduino.h>
+
+#include "../device.h"
+#include "../async_comm.h"
 
 // SUPPORTED COMMANDS
 #define WHEELDRIVER_STOP 1
@@ -54,7 +53,7 @@ public:
 
   ~ForwardServo() {}
 
-  void initialize()
+  void initialize() override
   {
     pinMode(this->pwmDirectPinFront, OUTPUT);
     pinMode(this->pwmDirectPinBack, OUTPUT);
@@ -110,7 +109,7 @@ public:
     }
   }
 
-  bool readCommand(AsyncCommunication &comm)
+  bool readCommand(AsyncCommunication &comm) override
   {
     uint8_t deviceId = comm.read(2);
 

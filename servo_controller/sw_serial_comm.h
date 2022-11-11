@@ -7,13 +7,20 @@
 #include "async_comm.h"
 #include "protocol.h"
 
+#include <SoftwareSerial.h>
+
 #define SERIAL_BOUND_RATE 115200
 #define SERIAL_RCV_WAIT_DELAY_ms 2
 #define RCV_BUFFER_SIZE 64
 #define SND_BUFFER_SIZE 64
 
-class UsbSerialCommunication : public AsyncCommunication
+class SoftwareSerialCommunication : public AsyncCommunication
 {
+private:
+    SoftwareSerial *ss;
+    int rxPin;
+    int txPin;
+
 protected:
     void waitBus() override
     {
@@ -21,31 +28,39 @@ protected:
     }
     void busInitialize() override
     {
-        Serial.begin(SERIAL_BOUND_RATE);
+        ss = new SoftwareSerial(rx, tx);
+        ss->listen();
     }
     unsigned int busBufferAvailableRead() override
     {
-        return Serial.available();
+        return ss->available();
     }
     char busRead() override
     {
-        return Serial.read();
+        return ss->read();
     }
     void busWrite(char val) override
     {
-        Serial.write(val);
+        ss->write(val);
     }
     unsigned int busBufferAvailableWrite() override
     {
-        return Serial.availableForWrite();
+        return ss->availableForWrite();
     }
     void busFlush() override
     {
-        Serial.flush();
+        ss->flush();
     }
     bool busReady() override
     {
-        return (Serial);
+        return ss != nullptr;
+    }
+
+public:
+    SoftwareSerialCommunication(int rxPin, int txPin)
+    {
+        this->rxPin = rxPin;
+        this->txPin = txPin;
     }
 };
 

@@ -11,7 +11,7 @@
 
 #define ACK_TIMEOUT_ms 100
 #define REQUEST_TIMEOUT_ms 1000
-//#define DEBUG 1
+#define DEBUG 1
 
 typedef unsigned char uchar;
 
@@ -59,7 +59,7 @@ public:
     bool isAck(uchar frameId)
     {
 #ifdef DEBUG
-        //printf("isAck?: %d\n", frameAck && this->frameId == frameId);
+        // printf("isAck?: %d\n", frameAck && this->frameId == frameId);
 #endif
         return frameAck && this->frameId == frameId;
     }
@@ -110,7 +110,7 @@ private:
         rcvMsg->frameId = rcvMsg->data[0];
         rcvMsg->frameType = rcvMsg->data[1];
         rcvMsg->deviceId = rcvMsg->data[2];
-        
+
 #ifdef DEBUG
         printf("received valid message: frameId: %d, frameType: %d, deviceId: %d, size: %d\n", rcvMsg->frameId, rcvMsg->frameType, rcvMsg->deviceId, rcvMsg->size);
 #endif
@@ -121,34 +121,87 @@ private:
     {
         while (run)
         {
-            if (comm->receiveData()) {
+            if (comm->receiveData())
+            {
                 rcvThreadHandlerValid();
                 comm->clearRcv();
-            } else
+            }
+            else
                 wait();
+        }
+    }
+
+    void executeCallbackForMessageData(ResponseData *rcvMsg)
+    {
+        auto it = this->handlers->find(rcvMsg->deviceId);
+
+        if (it != this->handlers->end())
+        {
+#ifdef DEBUG
+            printf("found handler for deviceId = %d\n", it->first);
+            if (it->second == nullptr)
+            {
+                printf("handler for deviceId = %d is NULL!!\n", it->first);
+            }
+#endif
+            if (it->second != nullptr)
+                it->second(rcvMsg);
+        }
+    }
+
+    void printRawData(const char *sensorName, ResponseData *p)
+    {
+        if (p == nullptr || p->data == nullptr)
+        {
+            printf("%s received null data!!\n", sensorName);
+            return;
+        }
+
+        printf("%s received data. Size: %d [", sensorName, p->size);
+        for (int i = 0; i < p->size; i++)
+            printf(" %d", p->data[i]);
+        printf(" ]\n");
+    }
+
+    void processListData(ResponseData *rcvMsg)
+    {
+        int i = 2;
+        while (i < rcvMsg->size)
+        {
+            ResponseData *subMsg = new ResponseData();
+            subMsg->deviceId = rcvMsg->data[i];
+            subMsg->frameId = 1;
+            subMsg->frameType = PROTOCOL_FRAME_TYPE_DATA;
+            subMsg->size = rcvMsg->data[++i];
+            subMsg->data = (char *)malloc(sizeof(char) * (subMsg->size + 1));
+
+            for (int j = 0; j < subMsg->size && i < rcvMsg->size; j++, i++)
+                subMsg->data[j] = rcvMsg->data[i];
+
+            processData(subMsg);
         }
     }
 
     void processData(ResponseData *rcvMsg)
     {
-        //        printf("data received\n");
-
-        auto it = this->handlers->find(rcvMsg->deviceId);
-
-        if (rcvMsg->frameType == PROTOCOL_FRAME_TYPE_ACK)
+        switch (rcvMsg->frameType)
         {
+        case PROTOCOL_FRAME_TYPE_ACK:
             requestAckWaitCheck.checkAck(rcvMsg);
 #ifdef DEBUG
             printf("data is ack\n");
 #endif
-        }
+            executeCallbackForMessageData(rcvMsg);
+            break;
+        case PROTOCOL_FRAME_TYPE_DATA_LIST:
+            processListData(rcvMsg);
+            break;
+        case PROTOCOL_FRAME_TYPE_DATA:
+            executeCallbackForMessageData(rcvMsg);
+            break;
 
-        if (it != this->handlers->end())
-        {
-#ifdef DEBUG                        
-            printf("found handler for deviceId = %d\n", it->first);
-#endif            
-            it->second(rcvMsg);
+        default:
+            break;
         }
 
         delete rcvMsg;
@@ -172,9 +225,9 @@ private:
             comm->write(payload[i]);
         }
 
-        //lock();
+        // lock();
         comm->sendData();
-        //unlock();
+        // unlock();
     }
 
     bool syncRequest(int num_params, uchar *payload)
