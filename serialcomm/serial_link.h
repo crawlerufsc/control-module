@@ -11,7 +11,7 @@
 
 #define ACK_TIMEOUT_ms 100
 #define REQUEST_TIMEOUT_ms 1000
-#define DEBUG 1
+//#define DEBUG 1
 
 typedef unsigned char uchar;
 
@@ -23,6 +23,26 @@ public:
     uchar frameId;
     uchar frameType;
     uchar deviceId;
+
+    char read(uint8_t pos)
+    {
+        return data[pos];
+    }
+
+    float readF(uint8_t pos)
+    {
+        float_pack pkt;
+        for (uint8_t i = 0; i < 4; i++)
+            pkt.bval[i] = data[pos+i];
+        return pkt.fval;
+    }
+    uint16_t read_uint16(uint8_t pos)
+    {
+        uint16p pkt;
+        pkt.bval[0] = data[pos];
+        pkt.bval[1] = data[pos+1];
+        return pkt.val;
+    }
 };
 
 class AckWait
@@ -298,6 +318,20 @@ public:
         payload[4] = val2;
         return syncRequest(5, payload);
     }
+    bool syncRequest(int deviceId, uchar val1, uint16_t val2)
+    {
+        uchar *payload = allocBuffer(6);
+        payload[0] = 0;
+        payload[1] = PROTOCOL_FRAME_TYPE_DATA;
+        payload[2] = deviceId;
+        uint16p v;
+        v.val = val2;
+        payload[3] = val1;
+        payload[4] = v.bval[0];
+        payload[5] = v.bval[1];
+        return syncRequest(6, payload);
+    }
+
     bool syncRequest(int deviceId, uchar val1, uchar val2, uchar val3)
     {
         uchar *payload = allocBuffer(6);

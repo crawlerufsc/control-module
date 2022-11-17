@@ -4,9 +4,10 @@
 #include <unistd.h>
 #include <string>
 #include "../../utils/filesystem.h"
+#include "../../hal/imu_data.h"
 
-//#define DEVICE "/dev/ttyACM0"
-#define DEVICE "/dev/ttyUSB0"
+#define DEVICE "/dev/ttyACM0"
+//#define DEVICE "/dev/ttyUSB0"
 
 void printRawData(const char *sensorName, ResponseData *p)
 {
@@ -32,23 +33,6 @@ void dummySensorData(ResponseData *p)
     printRawData("DUMMY SENSOR", p);
 }
 
-// float readF (ResponseData *p, int pos) {
-//     // uchar *f = (uchar *)malloc(sizeof(float) * sizeof(uchar));
-//     // for (int i = 0; i < sizeof(float); i++)
-//     //         f[i] = p->data[pos + i];
-
-//     float value = 0.0;
-//     memcpy(&value, &p[pos], sizeof(float));
-
-//     return value;
-// }
-float readF(ResponseData *p, unsigned int pos)
-{
-    float_pack pkt;
-    for (uint8_t i = 0; i < 4; i++)
-        pkt.bval[i] = p->data[pos++];
-    return pkt.fval;
-}
 void imuSensorData(ResponseData *p)
 {
     if (p->deviceId != SENSOR_IMU)
@@ -60,10 +44,11 @@ void imuSensorData(ResponseData *p)
     printf("ok 1\n");
     printRawData("IMU SENSOR", p);
 
-    for (int i = 1, j = 1; i < 28; i += 4, j++)
-    {
-        printf("sensor data %d [%d]: %f\n", j, i, readF(p, i));
-    }
+    IMUData *data = CrawlerHAL::parseData_IMU(p);
+
+    printf("IMU Data:\n");
+    printf("acc [%f, %f, %f]\n", data->accX, data->accY, data->accZ);
+    printf("gyro [%f, %f, %f]\n", data->gyroX, data->gyroY, data->gyroZ);
 }
 void gpsSensorData(ResponseData *p)
 {
@@ -76,8 +61,8 @@ void gpsSensorData(ResponseData *p)
     printf("ok 1\n");
     printRawData("GPS SENSOR", p);
 
-    printf("LAT = %f\n", readF(p, 1));
-    printf("LON = %f\n", readF(p, 5));
+    // printf("LAT = %f\n", readF(p, 1));
+    // printf("LON = %f\n", readF(p, 5));
 }
 int main(int argc, char **argv)
 {
@@ -93,8 +78,11 @@ int main(int argc, char **argv)
     bool lastAck = false;
 
     hal.addCallbackHandler(SENSOR_DUMMY, dummySensorData);
-    //hal.addCallbackHandler(SENSOR_IMU, imuSensorData);
+    hal.addCallbackHandler(SENSOR_IMU, imuSensorData);
     hal.addCallbackHandler(SENSOR_GPS, gpsSensorData);
+
+    // if (!hal.IMUSetSamplingPeriod(5000))
+    //     printf ("error setting sample period to 2000\n");
 
     // while (!hal.setDummySensorActive(true))
     // {
@@ -109,8 +97,13 @@ int main(int argc, char **argv)
     //     sleep(1);
     // }
 
+        // if (!hal.IMUCalibrate())
+        //     printf("error callibrating\n");
+
     while (1)
-        sleep(5);
+    {
+        sleep(1);
+    }
 
     return 0;
 }

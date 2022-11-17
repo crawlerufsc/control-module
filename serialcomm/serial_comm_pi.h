@@ -20,6 +20,8 @@
 #define PROTOCOL_ACK 1
 #define PROTOCOL_NACK 2
 
+//#define DEBUG 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,6 +45,8 @@ public:
     virtual bool hasData() = 0;
     virtual char read(unsigned int pos) = 0;
     virtual float readF(unsigned int pos) = 0;
+    virtual uint16_t readInt16(unsigned int pos) = 0;
+    virtual void writeInt16(uint16_t val) = 0;
     virtual void write(unsigned char val) = 0;
     virtual char *copy() = 0;
     virtual unsigned int receivedDataSize() = 0;
@@ -51,11 +55,17 @@ public:
     virtual void clearSnd() = 0;
 };
 
-typedef union {
-  float fval;
-  char bval[4];
+typedef union
+{
+    float fval;
+    char bval[4];
 } float_pack;
 
+typedef union
+{
+    uint16_t val;
+    char bval[2];
+} uint16p;
 
 class SerialCommunication : public ISerialCommunication
 {
@@ -118,15 +128,17 @@ public:
 
     bool receiveData() override
     {
-        if (rcvBufferSize > 0) return false;
+        if (rcvBufferSize > 0)
+            return false;
 
-        if (serialDataAvail(connFd) <= 0) return false;
-            
+        if (serialDataAvail(connFd) <= 0)
+            return false;
+
         rcvBufferSize = 0;
         int ch;
         int resp = RCV_RESP_INVALID;
 
-        //printf ("** buffer size: %d\n", serialDataAvail(connFd));
+        // printf ("** buffer size: %d\n", serialDataAvail(connFd));
 
         bool valid = false;
 
@@ -135,13 +147,13 @@ public:
             ch = readByte();
             if (ch == MSG_START)
                 valid = true;
-#ifdef DEBUG              
+#ifdef DEBUG
             else
                 printf("ignoring: %d\n", ch);
-#endif                
+#endif
         }
 
-        if (!valid) 
+        if (!valid)
             return false;
 
         valid = false;
@@ -195,13 +207,29 @@ public:
         return rcvBuffer[pos];
     }
 
-    float readF(unsigned int pos) override { 
+    float readF(unsigned int pos) override
+    {
         float_pack p;
         for (uint8_t i = 0; i < 4; i++)
             p.bval[i] = rcvBuffer[pos++];
         return p.fval;
     }
 
+    uint16_t readInt16(unsigned int pos) override
+    {
+        uint16p p;
+        p.bval[0] = rcvBuffer[pos++];
+        p.bval[1] = rcvBuffer[pos++];
+        return p.val;
+    }
+
+    void writeInt16(uint16_t val) override
+    {
+        uint16p p;
+        p.val = val;
+        write(p.bval[0]);
+        write(p.bval[1]);
+    }
     void write(unsigned char val) override
     {
         sndBuffer[sndBufferSize++] = val;
@@ -227,7 +255,7 @@ public:
 
     void clearRcv() override
     {
-        //clearReceiveBuffer();
+        // clearReceiveBuffer();
         rcvBufferSize = 0;
     }
 

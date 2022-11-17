@@ -2,6 +2,8 @@
 #define _DEVICE_CONTROLLER_H
 
 #include "../serialcomm/serial_link.h"
+#include "imu_data.h"
+#include "gps_data.h"
 
 #define TEST_DEVICE 1
 #define WHEELDRIVER 2
@@ -17,6 +19,9 @@
 
 #define DUMMY_SENSOR_CMD_ACTIVATE 1
 #define DUMMY_SENSOR_CMD_DEACTIVATE 2
+
+#define IMU_CALIBRATE 1
+#define IMU_SET_SAMPLING_PERIOD 2
 
 #define DEBUG 1
 
@@ -112,6 +117,52 @@ public:
     {
         comm->addHandler(deviceId, callback);
     }
+
+    bool IMUCalibrate()
+    {
+#ifdef DEBUG
+        printf("IMUCalibrate(): driver: %d, cmd: %d\n", SENSOR_IMU, IMU_CALIBRATE);
+#endif
+        return comm->syncRequest(SENSOR_IMU, IMU_CALIBRATE);
+    }
+
+    bool IMUSetSamplingPeriod(uint16_t period)
+    {
+#ifdef DEBUG
+        printf("IMUSetSamplingPeriod(): driver: %d, cmd: %d, val: %d\n", SENSOR_IMU, IMU_SET_SAMPLING_PERIOD, period);
+#endif
+        return comm->syncRequest(SENSOR_IMU, IMU_SET_SAMPLING_PERIOD, period);
+    }
+
+    static IMUData * parseData_IMU(ResponseData *p)
+    {
+        uint8_t size = p->read(0);
+
+        IMUData *imu = new IMUData ();
+        int pos = 1;
+        if (pos < size) imu->accX = p->readF(pos); pos += 4;
+        if (pos < size) imu->accY = p->readF(pos); pos += 4;
+        if (pos < size) imu->accZ = p->readF(pos); pos += 4;
+        if (pos < size) imu->gyroX = p->readF(pos); pos += 4;
+        if (pos < size) imu->gyroY = p->readF(pos); pos += 4;
+        if (pos < size) imu->gyroZ = p->readF(pos); pos += 4;        
+        if (pos < size) imu->angleX = p->readF(pos); pos += 4;
+        if (pos < size) imu->angleY = p->readF(pos); pos += 4;
+        if (pos < size) imu->angleZ = p->readF(pos); pos += 4;        
+        if (pos < size) imu->accAngleX = p->readF(pos); pos += 4;
+        if (pos < size) imu->accAngleY = p->readF(pos); 
+        return imu;
+    }
+        static GPSData * parseData_GPS(ResponseData *p)
+    {
+        uint8_t size = p->read(0);
+        GPSData *gps = new GPSData ();
+        int pos = 1;
+        if (pos < size) gps->lat = p->readF(pos); pos += 4;
+        if (pos < size) gps->lon = p->readF(pos);
+        return gps;
+    }
 };
 
 #endif
+

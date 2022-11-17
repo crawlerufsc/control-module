@@ -76,17 +76,20 @@ void restoreTerminal(int oldFlags)
 
 static struct termios oldt;
 
+//#define DEVICE "/dev/ttyUSB0"
+#define DEVICE "/dev/ttyACM0"
+
 int main(int argc, char **argv)
 {
-    if (!fileExists("/dev/ttyUSB0")) {
-        printf("/dev/ttyUSB0 not found" );
+    if (!fileExists(DEVICE)) {
+        printf("%s not found", DEVICE);
         return 1;
     }
 
 
     auto flags = setupTerminal();
     DriveSetting settings;
-    CrawlerHAL hal;
+    CrawlerHAL hal(DEVICE);
     bool run = true;
     bool stop = false;
     bool lastAck = false;
