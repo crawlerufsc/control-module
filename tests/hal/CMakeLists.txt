@@ -21,12 +21,15 @@ find_package_handle_standard_args(wiringPi DEFAULT_MSG WIRINGPI_LIBRARIES WIRING
 SET(TARGET_H
     ../../serialcomm/serial_comm_pi.h
     ../../serialcomm/serial_sync_link.h
-    ../../hal/crawler_hal.h
+    ../../lib/include/crawler_hal.h
 )
 
 add_executable(
     haltest
     crawler_hal_test.cpp
+    ../../lib/crawler_hal.cpp
+    ../../serialcomm/serial_comm_pi.cpp
+    ../../serialcomm/serial_link.cpp
 )
 
 # link my-recognition to jetson-inference library

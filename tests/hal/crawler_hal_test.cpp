@@ -1,4 +1,4 @@
-#include "../../hal/crawler_hal.h"
+#include "../../lib/include/crawler_hal.h"
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
@@ -76,8 +76,8 @@ void restoreTerminal(int oldFlags)
 
 static struct termios oldt;
 
-//#define DEVICE "/dev/ttyUSB0"
-#define DEVICE "/dev/ttyACM0"
+#define DEVICE "/dev/ttyUSB0"
+//#define DEVICE "/dev/ttyACM0"
 
 int main(int argc, char **argv)
 {

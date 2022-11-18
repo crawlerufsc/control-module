@@ -52,9 +52,35 @@ public:
     {
         return rcvSize > 0;
     }
+    int readByte() override
+    {
+        return 0;
+    }
     char read(unsigned int pos) override
     {
         return rcvbuff[pos];
+    }
+    float readF(unsigned int pos) override
+    {
+        float_pack p;
+        for (uint8_t i = 0; i < 4; i++)
+            p.bval[i] = rcvbuff[pos++];
+        return p.fval;
+    }
+    uint16_t readInt16(unsigned int pos)
+    {
+        uint16p p;
+        p.bval[0] = rcvbuff[pos++];
+        p.bval[1] = rcvbuff[pos++];
+        return p.val;
+    }
+
+    void writeInt16(uint16_t val)
+    {
+        uint16p p;
+        p.val = val;
+        write(p.bval[0]);
+        write(p.bval[1]);
     }
     void write(unsigned char val) override
     {
@@ -83,6 +109,11 @@ public:
     {
         sndSize = 0;
     }
+    void clearReceiveBuffer() override
+    {
+        rcvSize = 0;
+    }
+
 };
 
 TEST(LinkCommuncation, DummySerialSyncSendReceiveAck)
@@ -125,7 +156,7 @@ TEST(LinkCommuncation, ArduinoSendReceiveAck)
     auto result_test_ack = link->syncRequest(1, 2);
     EXPECT_TRUE(result_test_ack);
 
-    result_test_ack = link->syncRequest(1, 2, 3);
+    result_test_ack = link->syncRequest(1, 2, (uchar)3);
     EXPECT_TRUE(result_test_ack);
 
     result_test_ack = link->syncRequest(1, 2, 3, 4);
@@ -157,7 +188,6 @@ TEST(LinkCommuncation, ArduinoSendReceiveAsync)
 
     std::function<void(ResponseData *)> f(asyncTestReceiveAck);
     // link->addHandler(1, f);
-
 
     auto result_test_ack = link->syncRequest(1, 2);
     EXPECT_TRUE(result_test_ack);

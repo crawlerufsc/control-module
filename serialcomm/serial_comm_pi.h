@@ -35,14 +35,13 @@
 #include <mutex>
 #include <sys/ioctl.h>
 
-//#define DEBUG 1
-
 class ISerialCommunication
 {
 public:
     virtual bool receiveData() = 0;
     virtual void sendData() = 0;
     virtual bool hasData() = 0;
+    virtual int readByte() = 0;
     virtual char read(unsigned int pos) = 0;
     virtual float readF(unsigned int pos) = 0;
     virtual uint16_t readInt16(unsigned int pos) = 0;
@@ -51,21 +50,10 @@ public:
     virtual char *copy() = 0;
     virtual unsigned int receivedDataSize() = 0;
     virtual unsigned int sendDataSize() = 0;
+    virtual void clearReceiveBuffer() = 0;
     virtual void clearRcv() = 0;
     virtual void clearSnd() = 0;
 };
-
-typedef union
-{
-    float fval;
-    char bval[4];
-} float_pack;
-
-typedef union
-{
-    uint16_t val;
-    char bval[2];
-} uint16p;
 
 class SerialCommunication : public ISerialCommunication
 {
@@ -76,193 +64,26 @@ private:
     unsigned int rcvBufferSize;
     unsigned int sndBufferSize;
 
-    char *buildSendMessage()
-    {
-        char *msg = (char *)malloc(sizeof(unsigned char) * (sndBufferSize + 3));
-
-        msg[0] = MSG_START;
-        uint8_t i = 0;
-        for (i = 0; i < sndBufferSize; i++)
-        {
-            msg[i + 1] = sndBuffer[i];
-        }
-        msg[i + 1] = MSG_END;
-        msg[i + 2] = 0;
-        return msg;
-    }
+    char *buildSendMessage();
 
 public:
-    SerialCommunication(const char *device)
-    {
-        if (wiringPiSetup() == -1)
-        {
-            fprintf(stderr, "unable to initialize wiringPi\n");
-            exit(1);
-        }
+    SerialCommunication(const char *device);
 
-        connFd = serialOpen(device, SERIAL_BOUND_RATE);
-        if (connFd == -1)
-        {
-            fprintf(stderr, "unable to open device %s: %s\n", device, strerror(errno));
-            exit(1);
-        }
-    }
-
-    ~SerialCommunication()
-    {
-    }
-
-    int readByte()
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(SERIAL_WAIT_DELAY_ms));
-        return serialGetchar(connFd);
-    }
-
-    void clearReceiveBuffer()
-    {
-
-        while (serialDataAvail(connFd) > 0)
-            serialGetchar(connFd);
-        rcvBufferSize = 0;
-    }
-
-    bool receiveData() override
-    {
-        if (rcvBufferSize > 0)
-            return false;
-
-        if (serialDataAvail(connFd) <= 0)
-            return false;
-
-        rcvBufferSize = 0;
-        int ch;
-        int resp = RCV_RESP_INVALID;
-
-        // printf ("** buffer size: %d\n", serialDataAvail(connFd));
-
-        bool valid = false;
-
-        while (!valid && serialDataAvail(connFd) > 0)
-        {
-            ch = readByte();
-            if (ch == MSG_START)
-                valid = true;
-#ifdef DEBUG
-            else
-                printf("ignoring: %d\n", ch);
-#endif
-        }
-
-        if (!valid)
-            return false;
-
-        valid = false;
-
-        while (!valid && serialDataAvail(connFd) > 0 && rcvBufferSize < RCV_BUFFER_SIZE)
-        {
-            ch = readByte();
-            if (ch == MSG_END)
-                return true;
-
-            rcvBuffer[rcvBufferSize++] = (unsigned char)ch;
-        }
-
-#ifdef DEBUG
-        printf("RCV_RESP_INVALID [");
-        for (int i = 0; i < rcvBufferSize; i++)
-            printf(" %d", rcvBuffer[i]);
-        printf(" ]\n");
-#endif
-
-        rcvBufferSize = 0;
-        return false;
-    }
-
-    void sendData() override
-    {
-        if (sndBufferSize == 0)
-            return;
-
-        char *msg = buildSendMessage();
-#ifdef DEBUG
-        printf("sending: [");
-        for (int i = 0; i < sndBufferSize + 3; i++)
-        {
-            printf(" %d", msg[i]);
-        }
-        printf("]\n");
-#endif
-        serialPuts(connFd, msg);
-        std::this_thread::sleep_for(std::chrono::milliseconds(SERIAL_WAIT_DELAY_ms));
-        sndBufferSize = 0;
-    }
-
-    bool hasData() override
-    {
-        return rcvBufferSize > 0;
-    }
-
-    char read(unsigned int pos) override
-    {
-        return rcvBuffer[pos];
-    }
-
-    float readF(unsigned int pos) override
-    {
-        float_pack p;
-        for (uint8_t i = 0; i < 4; i++)
-            p.bval[i] = rcvBuffer[pos++];
-        return p.fval;
-    }
-
-    uint16_t readInt16(unsigned int pos) override
-    {
-        uint16p p;
-        p.bval[0] = rcvBuffer[pos++];
-        p.bval[1] = rcvBuffer[pos++];
-        return p.val;
-    }
-
-    void writeInt16(uint16_t val) override
-    {
-        uint16p p;
-        p.val = val;
-        write(p.bval[0]);
-        write(p.bval[1]);
-    }
-    void write(unsigned char val) override
-    {
-        sndBuffer[sndBufferSize++] = val;
-    }
-
-    char *copy() override
-    {
-        char *p = (char *)malloc(sizeof(char) * (rcvBufferSize + 1));
-        memcpy(p, &rcvBuffer, rcvBufferSize);
-        p[rcvBufferSize] = 0;
-        return p;
-    }
-
-    unsigned int receivedDataSize() override
-    {
-        return rcvBufferSize;
-    }
-
-    unsigned int sendDataSize() override
-    {
-        return sndBufferSize;
-    }
-
-    void clearRcv() override
-    {
-        // clearReceiveBuffer();
-        rcvBufferSize = 0;
-    }
-
-    void clearSnd() override
-    {
-        sndBufferSize = 0;
-    }
+    int readByte() override;
+    void clearReceiveBuffer() override;
+    bool receiveData() override;
+    void sendData() override;
+    bool hasData() override;
+    char read(unsigned int pos) override;
+    float readF(unsigned int pos) override;
+    uint16_t readInt16(unsigned int pos) override;
+    void writeInt16(uint16_t val) override;
+    void write(unsigned char val) override;
+    char *copy() override;
+    unsigned int receivedDataSize() override;
+    unsigned int sendDataSize() override;
+    void clearRcv() override;
+    void clearSnd() override;
 };
 
 #endif

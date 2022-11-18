@@ -2,6 +2,7 @@
 #define _SERIAL_LINK_H
 
 #include "serial_comm_pi.h"
+#include "../lib/include/crawler_hal.h"
 #include <cstdarg>
 #include <thread>
 #include <queue>
@@ -11,39 +12,10 @@
 
 #define ACK_TIMEOUT_ms 100
 #define REQUEST_TIMEOUT_ms 1000
+
 //#define DEBUG 1
 
 typedef unsigned char uchar;
-
-class ResponseData
-{
-public:
-    char *data;
-    unsigned int size;
-    uchar frameId;
-    uchar frameType;
-    uchar deviceId;
-
-    char read(uint8_t pos)
-    {
-        return data[pos];
-    }
-
-    float readF(uint8_t pos)
-    {
-        float_pack pkt;
-        for (uint8_t i = 0; i < 4; i++)
-            pkt.bval[i] = data[pos+i];
-        return pkt.fval;
-    }
-    uint16_t read_uint16(uint8_t pos)
-    {
-        uint16p pkt;
-        pkt.bval[0] = data[pos];
-        pkt.bval[1] = data[pos+1];
-        return pkt.val;
-    }
-};
 
 class AckWait
 {
@@ -85,7 +57,8 @@ public:
     }
 };
 
-class SerialLink
+
+class SerialLink: public ISerialLink
 {
 private:
     ISerialCommunication *comm;
@@ -97,283 +70,33 @@ private:
 
     bool run;
 
-    void initialize()
-    {
-        run = true;
-        this->rcvThread = new std::thread(&SerialLink::rcvThreadHandler, this);
-        this->handlers = new std::map<uchar, std::function<void(ResponseData *)>>();
-        comm->clearRcv();
-        comm->clearSnd();
-    }
-
-    void lock()
-    {
-        this->commMtx.lock();
-    }
-
-    void unlock()
-    {
-        this->commMtx.unlock();
-    }
-
-    int wait()
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(SERIAL_WAIT_DELAY_ms));
-        return SERIAL_WAIT_DELAY_ms;
-    }
-
-    void rcvThreadHandlerValid()
-    {
-        ResponseData *rcvMsg = new ResponseData();
-        rcvMsg->data = comm->copy();
-        rcvMsg->size = comm->receivedDataSize();
-        rcvMsg->frameId = rcvMsg->data[0];
-        rcvMsg->frameType = rcvMsg->data[1];
-        rcvMsg->deviceId = rcvMsg->data[2];
-
-#ifdef DEBUG
-        printf("received valid message: frameId: %d, frameType: %d, deviceId: %d, size: %d\n", rcvMsg->frameId, rcvMsg->frameType, rcvMsg->deviceId, rcvMsg->size);
-#endif
-        processData(rcvMsg);
-    }
-
-    void rcvThreadHandler()
-    {
-        while (run)
-        {
-            if (comm->receiveData())
-            {
-                rcvThreadHandlerValid();
-                comm->clearRcv();
-            }
-            else
-                wait();
-        }
-    }
-
-    void executeCallbackForMessageData(ResponseData *rcvMsg)
-    {
-        auto it = this->handlers->find(rcvMsg->deviceId);
-
-        if (it != this->handlers->end())
-        {
-#ifdef DEBUG
-            printf("found handler for deviceId = %d\n", it->first);
-            if (it->second == nullptr)
-            {
-                printf("handler for deviceId = %d is NULL!!\n", it->first);
-            }
-#endif
-            if (it->second != nullptr)
-                it->second(rcvMsg);
-        }
-    }
-
-    void printRawData(const char *sensorName, ResponseData *p)
-    {
-        if (p == nullptr || p->data == nullptr)
-        {
-            printf("%s received null data!!\n", sensorName);
-            return;
-        }
-
-        printf("%s received data. Size: %d [", sensorName, p->size);
-        for (int i = 0; i < p->size; i++)
-            printf(" %d", p->data[i]);
-        printf(" ]\n");
-    }
-
-    void processListData(ResponseData *rcvMsg)
-    {
-        int i = 2;
-        while (i < rcvMsg->size)
-        {
-            ResponseData *subMsg = new ResponseData();
-            subMsg->deviceId = rcvMsg->data[i];
-            subMsg->frameId = 1;
-            subMsg->frameType = PROTOCOL_FRAME_TYPE_DATA;
-            subMsg->size = rcvMsg->data[++i];
-            subMsg->data = (char *)malloc(sizeof(char) * (subMsg->size + 1));
-
-            for (int j = 0; j < subMsg->size && i < rcvMsg->size; j++, i++)
-                subMsg->data[j] = rcvMsg->data[i];
-
-            processData(subMsg);
-        }
-    }
-
-    void processData(ResponseData *rcvMsg)
-    {
-        switch (rcvMsg->frameType)
-        {
-        case PROTOCOL_FRAME_TYPE_ACK:
-            requestAckWaitCheck.checkAck(rcvMsg);
-#ifdef DEBUG
-            printf("data is ack\n");
-#endif
-            executeCallbackForMessageData(rcvMsg);
-            break;
-        case PROTOCOL_FRAME_TYPE_DATA_LIST:
-            processListData(rcvMsg);
-            break;
-        case PROTOCOL_FRAME_TYPE_DATA:
-            executeCallbackForMessageData(rcvMsg);
-            break;
-
-        default:
-            break;
-        }
-
-        delete rcvMsg;
-    }
-
-    uchar *allocBuffer(int size)
-    {
-        return (uchar *)malloc(sizeof(uchar) * size);
-    }
-
-    void request(int num_params, uchar *payload)
-    {
-        comm->clearSnd();
-        payload[0] = requestAckWaitCheck.getNextAckFrameId();
-#ifdef DEBUG
-        printf("request(): frameId = %d\n", payload[0]);
-#endif
-        for (int i = 0; i < num_params; i++)
-        {
-            // printf ("writing payload[%d] = %d\n - buffer: %d\n", i, payload[i], comm->sendDataSize());
-            comm->write(payload[i]);
-        }
-
-        // lock();
-        comm->sendData();
-        // unlock();
-    }
-
-    bool syncRequest(int num_params, uchar *payload)
-    {
-        unsigned int time_ms = 0, ack_time_ms = 0;
-
-        while (time_ms < REQUEST_TIMEOUT_ms)
-        {
-            ack_time_ms = 0;
-            request(num_params, payload);
-
-            while (ack_time_ms < ACK_TIMEOUT_ms)
-            {
-                if (this->requestAckWaitCheck.isAck(payload[0]))
-                    return true;
-
-                ack_time_ms += wait();
-            }
-#ifdef DEBUG
-            printf("syncRequest(): ACK timeout\n");
-#endif
-            time_ms += ack_time_ms;
-        }
-
-        return false;
-    }
+    void initialize();
+    void lock();
+    void unlock();
+    int wait();
+    void rcvThreadHandlerValid();
+    void rcvThreadHandler();
+    void executeCallbackForMessageData(ResponseData *rcvMsg);
+    void printRawData(const char *sensorName, ResponseData *p);
+    void processListData(ResponseData *rcvMsg);
+    void processData(ResponseData *rcvMsg);
+    uchar *allocBuffer(int size);
+    void request(int num_params, uchar *payload);
+    bool syncRequest(int num_params, uchar *payload);
 
 public:
-    SerialLink(ISerialCommunication *comm)
-    {
-        this->comm = comm;
-        initialize();
-    }
-    SerialLink(const char *device)
-    {
-        this->comm = new SerialCommunication(device);
-        initialize();
-    }
+    SerialLink(ISerialCommunication *comm);
+    SerialLink(const char *device);
 
-    ~SerialLink()
-    {
-        delete this->comm;
-        delete this->rcvThread;
-        delete this->handlers;
-    }
-
-    void addHandler(uchar deviceId, std::function<void(ResponseData *)> &func)
-    {
-        (*this->handlers)[deviceId] = func;
-    }
-
-    bool syncRequest(uchar deviceId, uchar val1)
-    {
-        uchar *payload = allocBuffer(4);
-        payload[0] = 0;
-        payload[1] = PROTOCOL_FRAME_TYPE_DATA;
-        payload[2] = deviceId;
-        payload[3] = val1;
-        return syncRequest(4, payload);
-    }
-    bool syncRequest(int deviceId, uchar val1, uchar val2)
-    {
-        uchar *payload = allocBuffer(5);
-        payload[0] = 0;
-        payload[1] = PROTOCOL_FRAME_TYPE_DATA;
-        payload[2] = deviceId;
-        payload[3] = val1;
-        payload[4] = val2;
-        return syncRequest(5, payload);
-    }
-    bool syncRequest(int deviceId, uchar val1, uint16_t val2)
-    {
-        uchar *payload = allocBuffer(6);
-        payload[0] = 0;
-        payload[1] = PROTOCOL_FRAME_TYPE_DATA;
-        payload[2] = deviceId;
-        uint16p v;
-        v.val = val2;
-        payload[3] = val1;
-        payload[4] = v.bval[0];
-        payload[5] = v.bval[1];
-        return syncRequest(6, payload);
-    }
-
-    bool syncRequest(int deviceId, uchar val1, uchar val2, uchar val3)
-    {
-        uchar *payload = allocBuffer(6);
-        payload[0] = 0;
-        payload[1] = PROTOCOL_FRAME_TYPE_DATA;
-        payload[2] = deviceId;
-        payload[3] = val1;
-        payload[4] = val2;
-        payload[5] = val3;
-        return syncRequest(6, payload);
-    }
-
-    void asyncRequest(uchar deviceId, uchar val1)
-    {
-        uchar *payload = allocBuffer(4);
-        payload[0] = 0;
-        payload[1] = PROTOCOL_FRAME_TYPE_DATA;
-        payload[2] = deviceId;
-        payload[3] = val1;
-        request(4, payload);
-    }
-    void asyncRequest(int deviceId, uchar val1, uchar val2)
-    {
-        uchar *payload = allocBuffer(5);
-        payload[0] = 0;
-        payload[1] = PROTOCOL_FRAME_TYPE_DATA;
-        payload[2] = deviceId;
-        payload[3] = val1;
-        payload[4] = val2;
-        request(5, payload);
-    }
-    void asyncRequest(int deviceId, uchar val1, uchar val2, uchar val3)
-    {
-        uchar *payload = allocBuffer(6);
-        payload[0] = 0;
-        payload[1] = PROTOCOL_FRAME_TYPE_DATA;
-        payload[2] = deviceId;
-        payload[3] = val1;
-        payload[4] = val2;
-        payload[5] = val3;
-        request(6, payload);
-    }
+    ~SerialLink();
+    void addHandler(uchar deviceId, std::function<void(ResponseData *)> &func) override;
+    bool syncRequest(uchar deviceId, uchar val1) override;
+    bool syncRequest(int deviceId, uchar val1, uchar val2) override;
+    bool syncRequest(int deviceId, uchar val1, uint16_t val2) override;
+    bool syncRequest(int deviceId, uchar val1, uchar val2, uchar val3) override;
+    void asyncRequest(uchar deviceId, uchar val1) override;
+    void asyncRequest(int deviceId, uchar val1, uchar val2) override;
+    void asyncRequest(int deviceId, uchar val1, uchar val2, uchar val3) override;
 };
 
 #endif

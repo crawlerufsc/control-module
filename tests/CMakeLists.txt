@@ -24,15 +24,17 @@ SET(TARGET_H
     ../serialcomm/serial_comm_pi.h
     ../serialcomm/serial_sync_link.h
     ../serialcomm/serial_link.h
-    ../hal/crawler_hal.h
+    ../lib/include/crawler_hal.h
 )
 
 add_executable(
     unittest
     control_tests.cpp
-    # serialcomm/serial_comm_pi_test.cpp
-    # serialcomm/serial_sync_link_test.cpp
+    serialcomm/serial_comm_pi_test.cpp
     serialcomm/serial_link_test.cpp
+    ../lib/crawler_hal.cpp
+    ../serialcomm/serial_comm_pi.cpp
+    ../serialcomm/serial_link.cpp
 )
 
 # link my-recognition to jetson-inference library
