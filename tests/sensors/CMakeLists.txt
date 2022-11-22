@@ -27,6 +27,9 @@ SET(TARGET_H
 add_executable(
     sensortest
     crawler_sensors_test.cpp
+    ../../lib/crawler_hal.cpp
+    ../../serialcomm/serial_comm_pi.cpp
+    ../../serialcomm/serial_link.cpp    
 )
 
 # link my-recognition to jetson-inference library

@@ -1,13 +1,13 @@
-#include "../../hal/crawler_hal.h"
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
 #include <string>
 #include "../../utils/filesystem.h"
-#include "../../hal/imu_data.h"
+#include "../../lib/include/imu_data.h"
+#include "../../lib/include/crawler_hal.h"
 
-#define DEVICE "/dev/ttyACM0"
-//#define DEVICE "/dev/ttyUSB0"
+//#define DEVICE "/dev/ttyACM0"
+#define DEVICE "/dev/ttyUSB0"
 
 void printRawData(const char *sensorName, ResponseData *p)
 {

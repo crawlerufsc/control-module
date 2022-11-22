@@ -1,6 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/crawler_control.dir/crawler_hal.cpp.o"
-  "CMakeFiles/crawler_control.dir/crawler_hal.cpp.o.d"
+  "CMakeFiles/crawler_control.dir/workspaces/driveless/control/serialcomm/serial_comm_pi.cpp.o"
+  "CMakeFiles/crawler_control.dir/workspaces/driveless/control/serialcomm/serial_link.cpp.o"
   "libcrawler_control.pdb"
   "libcrawler_control.so"
   "libcrawler_control.so.1"
