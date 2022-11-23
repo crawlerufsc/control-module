@@ -3,15 +3,16 @@
 #include "usb_serial_comm.h"
 #include "led_controller.h"
 #include "actuators/dummy_device.h"
-#include "actuators/steering_device.h"
+#include "actuators/double_steering_device.h"
 #include "actuators/forward_servo.h"
 #include "sensors/dummy_sensor.h"
 #include "sensors/imu_sensor.h"
 #include "sensors/gps_sensor.h"
 
 #define WHEELDRIVER 2
-#define DIRECTION_DRIVER_FRONT 3
-#define DIRECTION_DRIVER_BACK 4
+#define STEERING_DRIVER 3
+// #define DIRECTION_DRIVER_FRONT 3
+// #define DIRECTION_DRIVER_BACK 4
 #define SENSOR_DUMMY 100
 #define SENSOR_IMU 101
 #define SENSOR_GPS 102
@@ -34,9 +35,10 @@ UsbSerialCommunication comm;
 TimeoutController tc;
 LedController led(LED_BUILTIN);
 ForwardServo wheelMotor(WHEELDRIVER, 6, 4, 7, 5, 30, 36, 34, 32);
+DoubleSteeringDevice steering (STEERING_DRIVER, 3, 2);
 DummyDevice dummyDevice;
-SteeringDevice frontSteering(DIRECTION_DRIVER_FRONT, 3);
-SteeringDevice backSteering(DIRECTION_DRIVER_BACK, 2);
+// SteeringDevice frontSteering(DIRECTION_DRIVER_FRONT, 3);
+// SteeringDevice backSteering(DIRECTION_DRIVER_BACK, 2);
 DummySensor dummySensor(SENSOR_DUMMY);
 IMU imu(SENSOR_IMU);
 GPSS gps(SENSOR_GPS);
@@ -117,8 +119,7 @@ uint8_t runState_PROCESS_RCVD()
   // actuators
   ack = dummyDevice.readCommand(comm) ||   //
         wheelMotor.readCommand(comm) ||    //
-        frontSteering.readCommand(comm) || //
-        backSteering.readCommand(comm);
+        steering.readCommand(comm);
 
   // sensors
   ack = ack || dummySensor.readCommand(comm) || //
@@ -139,8 +140,7 @@ void setup()
 {
   comm.initialize();
   wheelMotor.initialize();
-  frontSteering.initialize();
-  backSteering.initialize();
+  steering.initialize();
   imu.initialize();
   gps.initialize();
 

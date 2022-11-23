@@ -3,6 +3,12 @@ project(crawler_control VERSION 1.0.0 DESCRIPTION "crawler hardware control libr
 
 include(GNUInstallDirs)
 
+find_library(WIRINGPI_LIBRARIES NAMES wiringPi)
+find_path(WIRINGPI_INCLUDE_DIRS NAMES wiringPi.h)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(wiringPi DEFAULT_MSG WIRINGPI_LIBRARIES WIRINGPI_INCLUDE_DIRS)
+
 SET(TARGET_H
     ../serialcomm/serial_comm_pi.h
     ../serialcomm/serial_sync_link.h
@@ -14,6 +20,7 @@ add_library(crawler_control SHARED
     ../serialcomm/serial_comm_pi.cpp
     ../serialcomm/serial_link.cpp
 )
+
 
 set_target_properties(crawler_control PROPERTIES
     VERSION ${PROJECT_VERSION}

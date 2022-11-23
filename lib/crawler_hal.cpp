@@ -1,6 +1,24 @@
 #include "include/crawler_hal.h"
 #include "../serialcomm/serial_link.h"
 
+#define TEST_DEVICE 1
+#define WHEELDRIVER 2
+#define STEERING_DRIVER 3
+#define STEERING_DRIVER_LEFT 1
+#define STEERING_DRIVER_RIGHT 2
+#define STEERING_DRIVER_CENTER 3
+
+#define WHEELDRIVER_STOP 1
+#define WHEELDRIVER_SET_FORWARD_PW 2
+#define WHEELDRIVER_SET_BACKWARD_PW 3
+
+#define DUMMY_SENSOR_CMD_ACTIVATE 1
+#define DUMMY_SENSOR_CMD_DEACTIVATE 2
+
+#define IMU_CALIBRATE 1
+#define IMU_SET_SAMPLING_PERIOD 2
+
+
 char *CrawlerHAL::allocBuffer(int size)
 {
     return (char *)malloc(sizeof(char) * size);
@@ -47,20 +65,27 @@ bool CrawlerHAL::setEngineStop()
     return comm->syncRequest(WHEELDRIVER, WHEELDRIVER_STOP);
 }
 
-bool CrawlerHAL::setWheelFrontAngle(int angle)
+bool CrawlerHAL::setSteeringAngle(int angle)
 {
 #ifdef DEBUG
-    printf("setWheelFront(): driver: %d, angle: %d\n", FRONT_DIRECTION_DRIVER, angle);
+    printf("setSteeringAngle(): driver: %d, angle: %d\n", STEERING_DRIVER, angle);
 #endif
-    return comm->syncRequest(FRONT_DIRECTION_DRIVER, (unsigned char)angle);
-}
 
-bool CrawlerHAL::setWheelBackAngle(int angle)
-{
-#ifdef DEBUG
-    printf("setWheelBack(): driver: %d, angle: %d\n", BACK_DIRECTION_DRIVER, angle);
-#endif
-    return comm->syncRequest(BACK_DIRECTION_DRIVER, (unsigned char)angle);
+    if (angle < -40)
+        angle = -40;
+
+    if (angle > 40)
+        angle = 40;  
+
+    if (angle < 0) {
+        uint8_t p = -1 * angle;
+        printf ("comm->syncRequest(STEERING_DRIVER: %d, STEERING_DRIVER_LEFT: %d, (unsigned char)p : %d)\n", STEERING_DRIVER, STEERING_DRIVER_LEFT, (unsigned char)p);
+        return comm->syncRequest(STEERING_DRIVER, STEERING_DRIVER_LEFT, (unsigned char)p);
+    }
+    else if (angle > 0)
+        return comm->syncRequest(STEERING_DRIVER, STEERING_DRIVER_RIGHT, (unsigned char)angle);
+    else
+        return comm->syncRequest(STEERING_DRIVER, STEERING_DRIVER_CENTER);
 }
 
 bool CrawlerHAL::setDummySensorActive(bool active)
@@ -101,55 +126,55 @@ bool CrawlerHAL::IMUSetSamplingPeriod(uint16_t period)
     return comm->syncRequest(SENSOR_IMU, IMU_SET_SAMPLING_PERIOD, period);
 }
 
-IMUData *CrawlerHAL::parseData_IMU(ResponseData *p)
+void CrawlerHAL::parseData_IMU(ResponseData *p, IMUData * outp)
 {
     uint8_t size = p->read(0);
 
-    IMUData *imu = new IMUData();
     int pos = 1;
     if (pos < size)
-        imu->accX = p->readF(pos);
+        outp->accX = p->readF(pos);
     pos += 4;
     if (pos < size)
-        imu->accY = p->readF(pos);
+        outp->accY = p->readF(pos);
     pos += 4;
     if (pos < size)
-        imu->accZ = p->readF(pos);
+        outp->accZ = p->readF(pos);
     pos += 4;
     if (pos < size)
-        imu->gyroX = p->readF(pos);
+        outp->gyroX = p->readF(pos);
     pos += 4;
     if (pos < size)
-        imu->gyroY = p->readF(pos);
+        outp->gyroY = p->readF(pos);
     pos += 4;
     if (pos < size)
-        imu->gyroZ = p->readF(pos);
+        outp->gyroZ = p->readF(pos);
     pos += 4;
     if (pos < size)
-        imu->angleX = p->readF(pos);
+        outp->angleX = p->readF(pos);
     pos += 4;
     if (pos < size)
-        imu->angleY = p->readF(pos);
+        outp->angleY = p->readF(pos);
     pos += 4;
     if (pos < size)
-        imu->angleZ = p->readF(pos);
+        outp->angleZ = p->readF(pos);
     pos += 4;
     if (pos < size)
-        imu->accAngleX = p->readF(pos);
+        outp->accAngleX = p->readF(pos);
     pos += 4;
     if (pos < size)
-        imu->accAngleY = p->readF(pos);
-    return imu;
+        outp->accAngleY = p->readF(pos);
 }
-GPSData *parseData_GPS(ResponseData *p)
+void CrawlerHAL::parseData_GPS(ResponseData *p, GPSData * outp)
 {
     uint8_t size = p->read(0);
-    GPSData *gps = new GPSData();
+
     int pos = 1;
+
     if (pos < size)
-        gps->lat = p->readF(pos);
+        outp->lat = p->readF(pos);
+
     pos += 4;
+
     if (pos < size)
-        gps->lon = p->readF(pos);
-    return gps;
+        outp->lon = p->readF(pos);
 }

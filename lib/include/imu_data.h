@@ -39,21 +39,37 @@ public:
         return p;
     }
 
+    void copy(IMUData * p)
+    {
+        p->temperature = temperature;
+        p->accX = accX;
+        p->accY = accY;
+        p->accZ = accZ;
+        p->gyroX = gyroX;
+        p->gyroY = gyroY;
+        p->gyroZ = gyroZ;
+        p->angleX = angleX;
+        p->angleY = angleY;
+        p->angleZ = angleZ;
+        p->accAngleX = accAngleX;
+        p->accAngleY = accAngleY;
+    }
+    
     const char *toJson()
     {
         std::stringstream ss;
         ss << "{\n";
-        ss << "'temperature' : " << temperature << "\n";
-        ss << "'accX' : " << accX << "\n";
-        ss << "'accY' : " << accY << "\n";
-        ss << "'accZ' : " << accZ << "\n";
-        ss << "'gyroX' : " << gyroX << "\n";
-        ss << "'gyroY' : " << gyroY << "\n";
-        ss << "'gyroZ' : " << gyroZ << "\n";
-        ss << "'angleX' : " << angleX << "\n";
-        ss << "'angleY' : " << angleY << "\n";
-        ss << "'angleZ' : " << angleZ << "\n";
-        ss << "'accAngleX' : " << accAngleX << "\n";
+        ss << "'temperature' : " << temperature << ",\n";
+        ss << "'accX' : " << accX << ",\n";
+        ss << "'accY' : " << accY << ",\n";
+        ss << "'accZ' : " << accZ << ",\n";
+        ss << "'gyroX' : " << gyroX << ",\n";
+        ss << "'gyroY' : " << gyroY << ",\n";
+        ss << "'gyroZ' : " << gyroZ << ",\n";
+        ss << "'angleX' : " << angleX << ",\n";
+        ss << "'angleY' : " << angleY << ",\n";
+        ss << "'angleZ' : " << angleZ << ",\n";
+        ss << "'accAngleX' : " << accAngleX << ",\n";
         ss << "'accAngleY' : " << accAngleY << "\n";
         ss << "}\n";
         return ss.str().c_str();

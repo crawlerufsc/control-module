@@ -38,4 +38,4 @@ add_executable(
 )
 
 # link my-recognition to jetson-inference library
-target_link_libraries(unittest ${GTEST_LIBRARIES}  ${WIRINGPI_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(unittest ${GTEST_LIBRARIES} ${WIRINGPI_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})

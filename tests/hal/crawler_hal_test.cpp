@@ -13,7 +13,7 @@ public:
 
     DriveSetting()
     {
-        headingAngle = 45;
+        headingAngle = 0;
         movingPower = 0;
     }
 };
@@ -24,7 +24,7 @@ char menu(DriveSetting &settings, bool lastAck)
     std::string ms;
     std::string ack;
 
-    if (settings.headingAngle >= 45)
+    if (settings.headingAngle >= 0)
         hs = "[+]";
     else
         hs = "[-]";
@@ -81,11 +81,11 @@ static struct termios oldt;
 
 int main(int argc, char **argv)
 {
-    if (!fileExists(DEVICE)) {
+    if (!fileExists(DEVICE))
+    {
         printf("%s not found", DEVICE);
         return 1;
     }
-
 
     auto flags = setupTerminal();
     DriveSetting settings;
@@ -102,27 +102,19 @@ int main(int argc, char **argv)
         switch (ch)
         {
         case 'w':
-            settings.movingPower+=25;
-            if (settings.movingPower > 255)
-                settings.movingPower = 255;
+            settings.movingPower += 25;
             break;
         case 's':
-            settings.movingPower-=25;
-            if (settings.movingPower < -255)
-                settings.movingPower = -255;
+            settings.movingPower -= 25;
             break;
         case 'a':
-            settings.headingAngle-=5;
-            if (settings.headingAngle < 0)
-                settings.headingAngle = 0;
+            settings.headingAngle -= 5;
             break;
         case 'd':
-            settings.headingAngle+=5;
-            if (settings.headingAngle > 90)
-                settings.headingAngle = 90;
+            settings.headingAngle += 5;
             break;
         case 'q':
-            settings.headingAngle = 45;
+            settings.headingAngle = 0;
             settings.movingPower = 0;
             break;
         case 27:
@@ -135,15 +127,24 @@ int main(int argc, char **argv)
         if (!run)
             break;
 
+        if (settings.movingPower > 255)
+            settings.movingPower = 255;
+
+        else if (settings.movingPower < -255)
+            settings.movingPower = -255;
+
+         if (settings.headingAngle < -40)
+             settings.headingAngle = -40;
+        
+         else if (settings.headingAngle > 40)
+             settings.headingAngle = 40;
+
         if (settings.movingPower >= 0)
             lastAck = hal.setEngineForward(settings.movingPower);
-        else 
+        else
             lastAck = hal.setEngineBackward(-settings.movingPower);
 
-        lastAck = hal.setWheelFrontAngle(settings.headingAngle);
-
-        lastAck = hal.setWheelBackAngle(settings.headingAngle);
-
+        lastAck = hal.setSteeringAngle(settings.headingAngle);
     }
 
     restoreTerminal(flags);

@@ -17,11 +17,17 @@ public:
         return p;
     }
 
+    void copy(GPSData *p)
+    {
+        p->lat = lat;
+        p->lon = lon;
+    }
+
     const char *toJson()
     {
         std::stringstream ss;
         ss << "{\n";
-        ss << "'lat' : " << lat << "\n";
+        ss << "'lat' : " << lat << ",\n";
         ss << "'lon' : " << lon << "\n";
         ss << "}\n";
         return ss.str().c_str();
