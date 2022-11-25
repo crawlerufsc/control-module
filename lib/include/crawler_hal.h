@@ -43,14 +43,14 @@ public:
     {
         float_pack pkt;
         for (uint8_t i = 0; i < 4; i++)
-            pkt.bval[i] = data[pos+i];
+            pkt.bval[i] = data[pos + i];
         return pkt.fval;
     }
     uint16_t read_uint16(uint8_t pos)
     {
         uint16p pkt;
         pkt.bval[0] = data[pos];
-        pkt.bval[1] = data[pos+1];
+        pkt.bval[1] = data[pos + 1];
         return pkt.val;
     }
 };
@@ -68,7 +68,6 @@ public:
     virtual void asyncRequest(int deviceId, uchar val1, uchar val2, uchar val3) = 0;
 };
 
-
 class CrawlerHAL
 {
 
@@ -76,9 +75,25 @@ private:
     ISerialLink *comm;
     char *allocBuffer(int size);
 
-public:
-    CrawlerHAL();
+    CrawlerHAL(const CrawlerHAL &) = delete;
     CrawlerHAL(const char *device);
+
+public:
+    static CrawlerHAL *_instance;
+
+    static void initialize(const char *device)
+    {
+        if (CrawlerHAL::_instance != nullptr)
+            delete CrawlerHAL::_instance;
+
+        CrawlerHAL::_instance = new CrawlerHAL(device);
+    }
+
+    static CrawlerHAL *getInstance()
+    {
+        return CrawlerHAL::_instance;
+    };
+
     ~CrawlerHAL();
 
     bool setEngineForward(unsigned char powerAccell);
@@ -89,11 +104,9 @@ public:
     void addCallbackHandler(uchar deviceId, std::function<void(ResponseData *)> callback);
     bool IMUCalibrate();
     bool IMUSetSamplingPeriod(uint16_t period);
-    
-    static void parseData_IMU(ResponseData *p, IMUData * outp);
-    static void parseData_GPS(ResponseData *p, GPSData * outp);
+
+    static void parseData_IMU(ResponseData *p, IMUData *outp);
+    static void parseData_GPS(ResponseData *p, GPSData *outp);
 };
-
-
 
 #endif

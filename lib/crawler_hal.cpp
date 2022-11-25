@@ -18,20 +18,19 @@
 #define IMU_CALIBRATE 1
 #define IMU_SET_SAMPLING_PERIOD 2
 
+CrawlerHAL *CrawlerHAL::_instance = nullptr;
 
 char *CrawlerHAL::allocBuffer(int size)
 {
     return (char *)malloc(sizeof(char) * size);
 }
 
-CrawlerHAL::CrawlerHAL()
-{
-    comm = new SerialLink("/dev/ttyUSB0");
-}
 CrawlerHAL::CrawlerHAL(const char *device)
 {
     comm = new SerialLink(device);
 }
+
+
 CrawlerHAL::~CrawlerHAL()
 {
     delete comm;
@@ -75,11 +74,12 @@ bool CrawlerHAL::setSteeringAngle(int angle)
         angle = -40;
 
     if (angle > 40)
-        angle = 40;  
+        angle = 40;
 
-    if (angle < 0) {
+    if (angle < 0)
+    {
         uint8_t p = -1 * angle;
-        printf ("comm->syncRequest(STEERING_DRIVER: %d, STEERING_DRIVER_LEFT: %d, (unsigned char)p : %d)\n", STEERING_DRIVER, STEERING_DRIVER_LEFT, (unsigned char)p);
+        printf("comm->syncRequest(STEERING_DRIVER: %d, STEERING_DRIVER_LEFT: %d, (unsigned char)p : %d)\n", STEERING_DRIVER, STEERING_DRIVER_LEFT, (unsigned char)p);
         return comm->syncRequest(STEERING_DRIVER, STEERING_DRIVER_LEFT, (unsigned char)p);
     }
     else if (angle > 0)
@@ -126,7 +126,7 @@ bool CrawlerHAL::IMUSetSamplingPeriod(uint16_t period)
     return comm->syncRequest(SENSOR_IMU, IMU_SET_SAMPLING_PERIOD, period);
 }
 
-void CrawlerHAL::parseData_IMU(ResponseData *p, IMUData * outp)
+void CrawlerHAL::parseData_IMU(ResponseData *p, IMUData *outp)
 {
     uint8_t size = p->read(0);
 
@@ -164,7 +164,7 @@ void CrawlerHAL::parseData_IMU(ResponseData *p, IMUData * outp)
     if (pos < size)
         outp->accAngleY = p->readF(pos);
 }
-void CrawlerHAL::parseData_GPS(ResponseData *p, GPSData * outp)
+void CrawlerHAL::parseData_GPS(ResponseData *p, GPSData *outp)
 {
     uint8_t size = p->read(0);
 

@@ -89,10 +89,12 @@ int main(int argc, char **argv)
 
     auto flags = setupTerminal();
     DriveSetting settings;
-    CrawlerHAL hal(DEVICE);
+
     bool run = true;
     bool stop = false;
     bool lastAck = false;
+
+    CrawlerHAL::initialize(DEVICE);
 
     while (run)
     {
@@ -140,11 +142,11 @@ int main(int argc, char **argv)
              settings.headingAngle = 40;
 
         if (settings.movingPower >= 0)
-            lastAck = hal.setEngineForward(settings.movingPower);
+            lastAck = CrawlerHAL::getInstance()->setEngineForward(settings.movingPower);
         else
-            lastAck = hal.setEngineBackward(-settings.movingPower);
+            lastAck = CrawlerHAL::getInstance()->setEngineBackward(-settings.movingPower);
 
-        lastAck = hal.setSteeringAngle(settings.headingAngle);
+        lastAck = CrawlerHAL::getInstance()->setSteeringAngle(settings.headingAngle);
     }
 
     restoreTerminal(flags);
