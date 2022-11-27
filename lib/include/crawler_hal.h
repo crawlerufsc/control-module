@@ -59,10 +59,12 @@ class ISerialLink
 {
 public:
     virtual void addHandler(uchar deviceId, std::function<void(ResponseData *)> &func) = 0;
+    virtual bool syncRequest(uchar deviceId) = 0;
     virtual bool syncRequest(uchar deviceId, uchar val1) = 0;
     virtual bool syncRequest(int deviceId, uchar val1, uchar val2) = 0;
     virtual bool syncRequest(int deviceId, uchar val1, uint16_t val2) = 0;
     virtual bool syncRequest(int deviceId, uchar val1, uchar val2, uchar val3) = 0;
+    virtual void asyncRequest(uchar deviceId) = 0;
     virtual void asyncRequest(uchar deviceId, uchar val1) = 0;
     virtual void asyncRequest(int deviceId, uchar val1, uchar val2) = 0;
     virtual void asyncRequest(int deviceId, uchar val1, uchar val2, uchar val3) = 0;
@@ -72,6 +74,7 @@ class CrawlerHAL
 {
 
 private:
+    const char *device;
     ISerialLink *comm;
     char *allocBuffer(int size);
 
@@ -81,13 +84,7 @@ private:
 public:
     static CrawlerHAL *_instance;
 
-    static void initialize(const char *device)
-    {
-        if (CrawlerHAL::_instance != nullptr)
-            delete CrawlerHAL::_instance;
-
-        CrawlerHAL::_instance = new CrawlerHAL(device);
-    }
+    static bool initialize(const char *device);
 
     static CrawlerHAL *getInstance()
     {
@@ -96,6 +93,7 @@ public:
 
     ~CrawlerHAL();
 
+    bool reset();
     bool setEngineForward(unsigned char powerAccell);
     bool setEngineBackward(unsigned char powerAccell);
     bool setEngineStop();
@@ -104,6 +102,7 @@ public:
     void addCallbackHandler(uchar deviceId, std::function<void(ResponseData *)> callback);
     bool IMUCalibrate();
     bool IMUSetSamplingPeriod(uint16_t period);
+    bool deviceExists();
 
     static void parseData_IMU(ResponseData *p, IMUData *outp);
     static void parseData_GPS(ResponseData *p, GPSData *outp);

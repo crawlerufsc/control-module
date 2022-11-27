@@ -50,6 +50,7 @@ char menu(DriveSetting &settings, bool lastAck)
     printf("\n\n");
     printf("last command status: %s\n", ack.c_str());
     printf("\n\n");
+    printf("(r) reset\n");
     printf("(q) stop\n");
     printf("(Esc) to quit\n\n");
     return getchar();
@@ -119,6 +120,9 @@ int main(int argc, char **argv)
             settings.headingAngle = 0;
             settings.movingPower = 0;
             break;
+        case 'r':
+            lastAck = CrawlerHAL::getInstance()->reset();
+            continue;
         case 27:
             run = false;
             break;
@@ -135,11 +139,11 @@ int main(int argc, char **argv)
         else if (settings.movingPower < -255)
             settings.movingPower = -255;
 
-         if (settings.headingAngle < -40)
-             settings.headingAngle = -40;
-        
-         else if (settings.headingAngle > 40)
-             settings.headingAngle = 40;
+        if (settings.headingAngle < -40)
+            settings.headingAngle = -40;
+
+        else if (settings.headingAngle > 40)
+            settings.headingAngle = 40;
 
         if (settings.movingPower >= 0)
             lastAck = CrawlerHAL::getInstance()->setEngineForward(settings.movingPower);

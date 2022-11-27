@@ -90,10 +90,12 @@ public:
 
     ~SerialLink();
     void addHandler(uchar deviceId, std::function<void(ResponseData *)> &func) override;
+    bool syncRequest(uchar deviceId) override;
     bool syncRequest(uchar deviceId, uchar val1) override;
     bool syncRequest(int deviceId, uchar val1, uchar val2) override;
     bool syncRequest(int deviceId, uchar val1, uint16_t val2) override;
     bool syncRequest(int deviceId, uchar val1, uchar val2, uchar val3) override;
+    void asyncRequest(uchar deviceId) override;
     void asyncRequest(uchar deviceId, uchar val1) override;
     void asyncRequest(int deviceId, uchar val1, uchar val2) override;
     void asyncRequest(int deviceId, uchar val1, uchar val2, uchar val3) override;

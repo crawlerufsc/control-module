@@ -204,6 +204,15 @@ void SerialLink::addHandler(uchar deviceId, std::function<void(ResponseData *)> 
     (*this->handlers)[deviceId] = func;
 }
 
+bool SerialLink::syncRequest(uchar deviceId)
+{
+    uchar *payload = allocBuffer(3);
+    payload[0] = 0;
+    payload[1] = PROTOCOL_FRAME_TYPE_DATA;
+    payload[2] = deviceId;
+    return syncRequest(3, payload);
+}
+
 bool SerialLink::syncRequest(uchar deviceId, uchar val1)
 {
     uchar *payload = allocBuffer(4);
@@ -249,6 +258,14 @@ bool SerialLink::syncRequest(int deviceId, uchar val1, uchar val2, uchar val3)
     return syncRequest(6, payload);
 }
 
+void SerialLink::asyncRequest(uchar deviceId)
+{
+    uchar *payload = allocBuffer(3);
+    payload[0] = 0;
+    payload[1] = PROTOCOL_FRAME_TYPE_DATA;
+    payload[2] = deviceId;
+    request(3, payload);
+}
 void SerialLink::asyncRequest(uchar deviceId, uchar val1)
 {
     uchar *payload = allocBuffer(4);

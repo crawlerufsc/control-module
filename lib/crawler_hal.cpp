@@ -1,5 +1,6 @@
 #include "include/crawler_hal.h"
 #include "../serialcomm/serial_link.h"
+#include "../utils/filesystem.h"
 
 #define TEST_DEVICE 1
 #define WHEELDRIVER 2
@@ -18,6 +19,8 @@
 #define IMU_CALIBRATE 1
 #define IMU_SET_SAMPLING_PERIOD 2
 
+#define RESET_CMD 254
+
 CrawlerHAL *CrawlerHAL::_instance = nullptr;
 
 char *CrawlerHAL::allocBuffer(int size)
@@ -27,9 +30,9 @@ char *CrawlerHAL::allocBuffer(int size)
 
 CrawlerHAL::CrawlerHAL(const char *device)
 {
+    this->device = device;
     comm = new SerialLink(device);
 }
-
 
 CrawlerHAL::~CrawlerHAL()
 {
@@ -177,4 +180,29 @@ void CrawlerHAL::parseData_GPS(ResponseData *p, GPSData *outp)
 
     if (pos < size)
         outp->lon = p->readF(pos);
+}
+bool CrawlerHAL::reset()
+{
+#ifdef DEBUG
+    printf("reset()\n");
+#endif
+    return comm->syncRequest(RESET_CMD);
+}
+
+bool CrawlerHAL::initialize(const char *device)
+{
+    if (!fileExists(device))
+        return false;
+
+    if (CrawlerHAL::_instance != nullptr)
+        delete CrawlerHAL::_instance;
+
+    CrawlerHAL::_instance = new CrawlerHAL(device);
+
+    return true;
+}
+
+bool CrawlerHAL::deviceExists()
+{
+    return fileExists(this->device);
 }
