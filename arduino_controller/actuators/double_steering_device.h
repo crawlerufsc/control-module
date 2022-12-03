@@ -16,6 +16,12 @@
 #define STEERING_DRIVER_LEFT 1
 #define STEERING_DRIVER_RIGHT 2
 #define STEERING_DRIVER_CENTER 3
+#define STEERING_FRONT_DRIVER_LEFT 11
+#define STEERING_FRONT_DRIVER_RIGHT 12
+#define STEERING_FRONT_DRIVER_CENTER 13
+#define STEERING_BACK_DRIVER_LEFT 21
+#define STEERING_BACK_DRIVER_RIGHT 22
+#define STEERING_BACK_DRIVER_CENTER 23
 
 class DoubleSteeringDevice : public Device
 {
@@ -26,7 +32,7 @@ private:
     Servo servoFront;
     Servo servoBack;
 
-    void setSteeringAngle(int angle)
+    void setSteeringAngle(int angle, bool front, bool back)
     {
         if (angle > MAX_RANGE)
             angle = MAX_RANGE;
@@ -34,8 +40,12 @@ private:
         if (angle < -MAX_RANGE)
             angle = -MAX_RANGE;
 
-        servoFront.write(PHY_CENTER_ANGLE_FRONT + angle);
-        servoBack.write(PHY_CENTER_ANGLE_BACK - angle);
+        if (front)
+            servoFront.write(PHY_CENTER_ANGLE_FRONT + angle);
+        if (back)
+            servoBack.write(PHY_CENTER_ANGLE_BACK - angle);
+
+        
     }
 
 public:
@@ -54,7 +64,7 @@ public:
     {
         servoFront.attach(this->pwmDirectionFront);
         servoBack.attach(this->pwmDirectionBack);
-        setSteeringAngle(0);
+        setSteeringAngle(0, true, true);
     }
     bool readCommand(AsyncCommunication &comm) override
     {
@@ -69,14 +79,33 @@ public:
         switch (direction)
         {
         case STEERING_DRIVER_CENTER:
-            setSteeringAngle(0);
+            setSteeringAngle(0, true, true);
             break;
         case STEERING_DRIVER_LEFT:
-            setSteeringAngle(-angle);
+            setSteeringAngle(-angle, true, true);
             break;
         case STEERING_DRIVER_RIGHT:
-            setSteeringAngle(angle);
+            setSteeringAngle(angle, true, true);
             break;
+        case STEERING_FRONT_DRIVER_CENTER:
+            setSteeringAngle(0, true, false);
+            break;
+        case STEERING_FRONT_DRIVER_LEFT:
+            setSteeringAngle(-angle, true, false);
+            break;
+        case STEERING_FRONT_DRIVER_RIGHT:
+            setSteeringAngle(angle, true, false);
+            break;
+        case STEERING_BACK_DRIVER_CENTER:
+            setSteeringAngle(0, false, true);
+            break;
+        case STEERING_BACK_DRIVER_LEFT:
+            setSteeringAngle(-angle, false, true);
+            break;
+        case STEERING_BACK_DRIVER_RIGHT:
+            setSteeringAngle(angle, false, true);
+            break;
+
         default:
             break;
         }

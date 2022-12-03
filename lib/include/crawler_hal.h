@@ -81,6 +81,8 @@ private:
     CrawlerHAL(const CrawlerHAL &) = delete;
     CrawlerHAL(const char *device);
 
+    bool setSteeringAngle(int angle, bool front, bool back);
+
 public:
     static CrawlerHAL *_instance;
 
@@ -98,6 +100,8 @@ public:
     bool setEngineBackward(unsigned char powerAccell);
     bool setEngineStop();
     bool setSteeringAngle(int angle);
+    bool setSteeringAngleFront(int angle);
+    bool setSteeringAngleBack(int angle);
     bool setDummySensorActive(bool active);
     void addCallbackHandler(uchar deviceId, std::function<void(ResponseData *)> callback);
     bool IMUCalibrate();

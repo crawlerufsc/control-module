@@ -8,6 +8,12 @@
 #define STEERING_DRIVER_LEFT 1
 #define STEERING_DRIVER_RIGHT 2
 #define STEERING_DRIVER_CENTER 3
+#define STEERING_FRONT_DRIVER_LEFT 11
+#define STEERING_FRONT_DRIVER_RIGHT 12
+#define STEERING_FRONT_DRIVER_CENTER 13
+#define STEERING_BACK_DRIVER_LEFT 21
+#define STEERING_BACK_DRIVER_RIGHT 22
+#define STEERING_BACK_DRIVER_CENTER 23
 
 #define WHEELDRIVER_STOP 1
 #define WHEELDRIVER_SET_FORWARD_PW 2
@@ -67,11 +73,13 @@ bool CrawlerHAL::setEngineStop()
     return comm->syncRequest(WHEELDRIVER, WHEELDRIVER_STOP);
 }
 
-bool CrawlerHAL::setSteeringAngle(int angle)
+bool CrawlerHAL::setSteeringAngle(int angle, bool front, bool back)
 {
 #ifdef DEBUG
     printf("setSteeringAngle(): driver: %d, angle: %d\n", STEERING_DRIVER, angle);
 #endif
+
+    uchar cmd = 0;
 
     if (angle < -40)
         angle = -40;
@@ -81,14 +89,46 @@ bool CrawlerHAL::setSteeringAngle(int angle)
 
     if (angle < 0)
     {
-        uint8_t p = -1 * angle;
-        printf("comm->syncRequest(STEERING_DRIVER: %d, STEERING_DRIVER_LEFT: %d, (unsigned char)p : %d)\n", STEERING_DRIVER, STEERING_DRIVER_LEFT, (unsigned char)p);
-        return comm->syncRequest(STEERING_DRIVER, STEERING_DRIVER_LEFT, (unsigned char)p);
+        angle = -1 * angle;
+        if (front && back)
+            cmd = STEERING_DRIVER_LEFT;
+        else if (front)
+            cmd = STEERING_FRONT_DRIVER_LEFT;
+        else
+            cmd = STEERING_BACK_DRIVER_LEFT;
     }
     else if (angle > 0)
-        return comm->syncRequest(STEERING_DRIVER, STEERING_DRIVER_RIGHT, (unsigned char)angle);
+    {
+        if (front && back)
+            cmd = STEERING_DRIVER_RIGHT;
+        else if (front)
+            cmd = STEERING_FRONT_DRIVER_RIGHT;
+        else
+            cmd = STEERING_BACK_DRIVER_RIGHT;
+    }
     else
-        return comm->syncRequest(STEERING_DRIVER, STEERING_DRIVER_CENTER);
+    {
+        if (front && back)
+            cmd = STEERING_DRIVER_CENTER;
+        else if (front)
+            cmd = STEERING_FRONT_DRIVER_CENTER;
+        else
+            cmd = STEERING_BACK_DRIVER_CENTER;
+    }
+
+    return comm->syncRequest(STEERING_DRIVER, cmd, (unsigned char)angle);
+}
+
+bool CrawlerHAL::setSteeringAngle(int angle) {
+    return setSteeringAngle(angle, true, true);
+}
+
+bool CrawlerHAL::setSteeringAngleFront(int angle) {
+    return setSteeringAngle(angle, true, false);
+}
+
+bool CrawlerHAL::setSteeringAngleBack(int angle) {
+    return setSteeringAngle(angle, false, true);
 }
 
 bool CrawlerHAL::setDummySensorActive(bool active)
