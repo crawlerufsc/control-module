@@ -7,7 +7,7 @@ void SerialLink::initialize()
 {
     run = true;
     this->rcvThread = new std::thread(&SerialLink::rcvThreadHandler, this);
-    this->handlers = new std::map<uchar, std::function<void(ResponseData *)>>();
+    this->handlers = new std::map<uchar, std::vector<SerialLinkResponseCallback *> *>();
     comm->clearRcv();
     comm->clearSnd();
 }
@@ -71,7 +71,14 @@ void SerialLink::executeCallbackForMessageData(ResponseData *rcvMsg)
         }
 #endif
         if (it->second != nullptr)
-            it->second(rcvMsg);
+        {
+            auto vector = it->second;
+            for (auto ptr = vector->begin(); ptr < vector->end(); ptr++)
+            {
+                (*ptr)->callback(rcvMsg);
+            }
+        }
+        // it->second(rcvMsg);
     }
 }
 
@@ -194,14 +201,79 @@ SerialLink::SerialLink(const char *device)
 
 SerialLink::~SerialLink()
 {
+    if (run)
+    {
+        run = false;
+        this->rcvThread->join();
+    }
     delete this->comm;
     delete this->rcvThread;
+
     delete this->handlers;
 }
 
-void SerialLink::addHandler(uchar deviceId, std::function<void(ResponseData *)> &func)
+void SerialLink::addHandler(uchar deviceId, uchar handlerId, std::function<void(ResponseData *)> &func)
 {
-    (*this->handlers)[deviceId] = func;
+    if ((*this->handlers).find(deviceId) == (*this->handlers).end())
+    {
+        (*this->handlers)[deviceId] = new std::vector<SerialLinkResponseCallback *>();
+    }
+    auto vector = ((*this->handlers)[deviceId]);
+
+    SerialLinkResponseCallback *rc = new SerialLinkResponseCallback();
+    rc->id = handlerId;
+    rc->callback = func;
+    vector->push_back(rc);
+}
+
+void SerialLink::removeHandler(uchar deviceId, uchar handlerId)
+{
+    if ((*this->handlers).find(deviceId) == (*this->handlers).end())
+        return;
+
+    std::vector<SerialLinkResponseCallback *> *vector = (*this->handlers)[deviceId];
+
+    for (auto it = vector->begin(); it != vector->end(); it++)
+    {
+        if ((*it)->id == handlerId)
+        {
+            vector->erase(it);
+            delete *it;
+            return;
+        }
+    }
+}
+
+void SerialLink::hasHandler(uchar deviceId, uchar handlerId)
+{
+    if ((*this->handlers).find(deviceId) == (*this->handlers).end())
+        return false;
+
+    std::vector<SerialLinkResponseCallback *> *vector = (*this->handlers)[deviceId];
+
+    for (auto it = vector->begin(); it != vector->end(); it++)
+    {
+        if ((*it)->id == handlerId)
+            return true;
+    }
+
+    return false;
+}
+
+
+void SerialLink::clearHandlers()
+{
+    for (auto it = (*this->handlers).begin(); it != (*this->handlers).end(); it++)
+    {
+        for (auto it2 = it->second->begin(); it2 != it->second->end(); it2++)
+        {
+            if (*it2 != nullptr)
+            {
+                delete *it2;
+            }
+        }
+        delete it->second;
+    }
 }
 
 bool SerialLink::syncRequest(uchar deviceId)

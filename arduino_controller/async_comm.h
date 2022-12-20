@@ -75,6 +75,13 @@ public:
             sndBuffer[sndBufferSize++] = p[i];
     }
 
+    void writeL(long val) 
+    {
+        unsigned char const *p = reinterpret_cast<unsigned char const *>(&val);
+        for (int i = 0; i < sizeof(long); i++)
+            sndBuffer[sndBufferSize++] = p[i];
+    }
+
     void receiveData() 
     {
         if (rcvBufferSize > 0)

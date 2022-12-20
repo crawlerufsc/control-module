@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 #include <set>
+#include <iostream>
 #include "../../utils/filesystem.h"
 #include "../serialcomm/serial_link.h"
 
-//#define DEBUG 1
+// #define DEBUG 1
 
 class DummySerialCommunication : public ISerialCommunication
 {
@@ -62,7 +63,7 @@ public:
     }
     float readF(unsigned int pos) override
     {
-        float_pack p;
+        floatp p;
         for (uint8_t i = 0; i < 4; i++)
             p.bval[i] = rcvbuff[pos++];
         return p.fval;
@@ -113,12 +114,10 @@ public:
     {
         rcvSize = 0;
     }
-
 };
 
 TEST(LinkCommuncation, DummySerialSyncSendReceiveAck)
 {
-    return;
     ISerialCommunication *comm = new DummySerialCommunication();
     ((DummySerialCommunication *)comm)->testSetReceiveDataResponse(RCV_RESP_VALID);
     SerialLink *link = new SerialLink(comm);
@@ -130,7 +129,6 @@ TEST(LinkCommuncation, DummySerialSyncSendReceiveAck)
 
 TEST(LinkCommuncation, DummySerialSyncSendReceiveNAck)
 {
-    return;
     ISerialCommunication *comm = new DummySerialCommunication();
     ((DummySerialCommunication *)comm)->testSetReceiveDataResponse(RCV_RESP_INVALID);
     SerialLink *link = new SerialLink(comm);
@@ -143,7 +141,7 @@ TEST(LinkCommuncation, DummySerialSyncSendReceiveNAck)
 TEST(LinkCommuncation, ArduinoSendReceiveAck)
 {
     return;
-    const char *device = "/dev/ttyACM0";
+    const char *device = "/dev/ttyUSB0";
 
     if (!fileExists(device))
     {
@@ -174,7 +172,7 @@ void asyncTestReceiveAck(ResponseData *data)
 
 TEST(LinkCommuncation, ArduinoSendReceiveAsync)
 {
-    const char *device = "/dev/ttyACM0";
+    const char *device = "/dev/ttyUSB0";
 
     if (!fileExists(device))
     {
@@ -192,9 +190,97 @@ TEST(LinkCommuncation, ArduinoSendReceiveAsync)
     auto result_test_ack = link->syncRequest(1, 2);
     EXPECT_TRUE(result_test_ack);
 
-    link->addHandler(1, f);
+    link->addHandler(1, 1, f);
     link->asyncRequest(1, 12);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     EXPECT_TRUE(test_ack_received);
+}
+
+class SerialLinkTestHandler : public SerialLink
+{
+public:
+    SerialLinkTestHandler(ISerialCommunication *comm) : SerialLink(comm)
+    {
+    }
+
+    bool checkHandlerAdded(uchar deviceId, uchar handlerId)
+    {
+
+        if ((*this->handlers).find(deviceId) == (*this->handlers).end())
+            return false;
+
+        std::vector<SerialLinkResponseCallback *> *vector = (*this->handlers)[deviceId];
+        if (vector->size() == 0)
+            return false;
+        std::cout << "found " << vector->size() << " handlers for device " << (int)deviceId << "\n";
+
+        for (auto it = vector->begin(); it != vector->end(); it++)
+        {
+            SerialLinkResponseCallback *p = *it;
+            if (p == nullptr) {
+                std::cout << "callback is null, but shouldnt be\n";
+                continue;
+            }
+
+            if (p->id == handlerId)
+                return true;
+        }
+
+        return false;
+    }
+
+    void testDataToHandlers(uchar deviceId)
+    {
+        ResponseData *p = new ResponseData();
+        p->deviceId = deviceId;
+        p->frameId = 11;
+        p->frameType = 1;
+        p->data = (char *)malloc(sizeof(char) * 100);
+        for (int i = 0; i < 100; i++)
+            p->data[i] = i + 1;
+
+        processData(p);
+    }
+};
+
+TEST(LinkCommuncation, HandlerAddRemoveTest)
+{
+    ISerialCommunication *comm = new DummySerialCommunication();
+    ((DummySerialCommunication *)comm)->testSetReceiveDataResponse(RCV_RESP_VALID);
+
+    auto link = new SerialLinkTestHandler(comm);
+
+    std::function<void(ResponseData * p)> f = [](ResponseData *p) { //
+        int i = 0;
+    };
+
+    link->addHandler(150, 5, f);
+
+    ASSERT_TRUE(link->checkHandlerAdded(150, 5));
+    link->removeHandler(150, 5);
+    ASSERT_FALSE(link->checkHandlerAdded(150, 5));
+    delete link;
+}
+
+TEST(LinkCommuncation, HandlerExec)
+{
+    ISerialCommunication *comm = new DummySerialCommunication();
+    ((DummySerialCommunication *)comm)->testSetReceiveDataResponse(RCV_RESP_VALID);
+
+    auto link = new SerialLinkTestHandler(comm);
+    bool dataReceived = false;
+
+    std::function<void(ResponseData * p)> f = [&dataReceived](ResponseData *p) { //
+        dataReceived = true;
+
+        for (int i = 0; i < 100; i++)
+            ASSERT_EQ(p->data[i], i + 1);
+    };
+
+    link->addHandler(150, 5, f);
+    link->testDataToHandlers(150);
+
+    ASSERT_TRUE(dataReceived);
+    delete link;
 }

@@ -12,13 +12,20 @@ find_package_handle_standard_args(wiringPi DEFAULT_MSG WIRINGPI_LIBRARIES WIRING
 SET(TARGET_H
     ../serialcomm/serial_comm_pi.h
     ../serialcomm/serial_sync_link.h
-    ../hal/crawler_hal.h
+    include/crawler_hal.h
+    include/comm_types.h
+    include/gps_data.h
+    include/imu_data.h
+    include/bin_codec.h
 )
 
 add_library(crawler_control SHARED
     crawler_hal.cpp
+    gps_data.cpp
+    imu_data.cpp    
     ../serialcomm/serial_comm_pi.cpp
     ../serialcomm/serial_link.cpp
+    
 )
 
 

@@ -25,16 +25,25 @@ SET(TARGET_H
     ../serialcomm/serial_sync_link.h
     ../serialcomm/serial_link.h
     ../lib/include/crawler_hal.h
+    ../lib/include/gps_data.h
+    ../lib/include/imu_data.h
+    ../lib/include/bin_codec.h
+    ../lib/include/comm_types.h
 )
 
 add_executable(
     unittest
+    ../serialcomm/serial_link.cpp
+    ../serialcomm/serial_comm_pi.cpp
+    ../lib/crawler_hal.cpp
+    ../lib/gps_data.cpp
+    ../lib/imu_data.cpp
+
     control_tests.cpp
+    tstinclude/gps_data_test.cpp
+    tstinclude/imu_data_test.cpp
     serialcomm/serial_comm_pi_test.cpp
     serialcomm/serial_link_test.cpp
-    ../lib/crawler_hal.cpp
-    ../serialcomm/serial_comm_pi.cpp
-    ../serialcomm/serial_link.cpp
 )
 
 # link my-recognition to jetson-inference library

@@ -30,6 +30,9 @@ SerialCommunication::SerialCommunication(const char *device)
         fprintf(stderr, "unable to open device %s: %s\n", device, strerror(errno));
         exit(1);
     }
+
+    sndBufferSize = 0;
+    rcvBufferSize = 0;
 }
 
 int SerialCommunication::readByte()
@@ -129,7 +132,7 @@ char SerialCommunication::read(unsigned int pos)
 
 float SerialCommunication::readF(unsigned int pos) 
 {
-    float_pack p;
+    floatp p;
     for (uint8_t i = 0; i < 4; i++)
         p.bval[i] = rcvBuffer[pos++];
     return p.fval;

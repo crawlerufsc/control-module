@@ -1,6 +1,9 @@
 #ifndef _GPS_DATA_H
 #define _GPS_DATA_H
 
+#include <string>
+#include "bin_codec.h"
+
 class GPSData
 {
 private:
@@ -8,30 +11,19 @@ private:
 public:
     float lat;
     float lon;
+    long age;
+    int numSatellites;
+    long hdop;
+    long altitude;
+    float speedKmh;
+    
 
-    GPSData *clone()
-    {
-        GPSData *p = new GPSData();
-        p->lat = lat;
-        p->lon = lon;
-        return p;
-    }
-
-    void copy(GPSData *p)
-    {
-        p->lat = lat;
-        p->lon = lon;
-    }
-
-    const char *toJson()
-    {
-        std::stringstream ss;
-        ss << "{\n";
-        ss << "'lat' : " << lat << ",\n";
-        ss << "'lon' : " << lon << "\n";
-        ss << "}\n";
-        return ss.str().c_str();
-    }
+    GPSData *clone();
+    std::string toJson();
+    static GPSData * decode(char *data);
+    static GPSData * decode(char *data, uint16_t initPos);
+    char * encode();
+    static void printVector(char *value);
 };
 
 #endif

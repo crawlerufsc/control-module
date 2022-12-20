@@ -46,32 +46,45 @@ TEST(SerialCommuncationTst, VirtualDeviceSerialSendReceive)
 
 bool sendTestMessage(SerialCommunication *comm, int frameId)
 {
-    comm->write(frameId);
+    comm->write((unsigned char)frameId);
     comm->write(PROTOCOL_FRAME_TYPE_DATA);
     comm->write(1);
     comm->write(1);
     comm->sendData();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    if (comm->receiveData() == RCV_RESP_VALID)
+    int timeout = 2000;
+
+    while (timeout > 0)
     {
-        printf("received result: [%d, %d]\n", comm->read(0), comm->read(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (comm->receiveData() != RCV_RESP_VALID)
+        {
+            comm->clearRcv();
+            printf("received something invalid\n");
+            timeout -= 100;
+            continue;
+        }
+
+        printf("received result: [%d, %d, %d]\n", comm->read(0), comm->read(1), comm->read(2));
+
+        if (comm->read(0) == frameId && comm->read(1) == PROTOCOL_FRAME_TYPE_ACK)
+        {
+            return comm->read(2) == 1;
+        }
+
+        timeout -= 100;
+        comm->clearRcv();
     }
 
-    bool p = (comm->read(0) == frameId                    //
-              && comm->read(1) == PROTOCOL_FRAME_TYPE_ACK //
-              && comm->read(2) == 1                       //
-    );
-    comm->clearRcv();
-    return p;
+    return false;
 }
 
 bool wakeUpArduino(SerialCommunication *comm)
 {
-    int p = 0;
-    while (p < 20)
+    int p = 1;
+    while (p < 21)
     {
-        if (sendTestMessage(comm, 1))
+        if (sendTestMessage(comm, p))
             return true;
         p++;
     }
@@ -80,7 +93,7 @@ bool wakeUpArduino(SerialCommunication *comm)
 
 TEST(SerialCommuncationTst, ArduinoSerialSendReceive)
 {
-    const char *device = "/dev/ttyACM0";
+    const char *device = "/dev/ttyUSB0";
     // const char *device = "/dev/ttyS0";
 
     if (!fileExists(device))
@@ -96,35 +109,6 @@ TEST(SerialCommuncationTst, ArduinoSerialSendReceive)
         FAIL() << "cant communicate with arduino\n";
         return;
     }
-
-    int deviceId = 1;
-    int frameId = 23;
-    int command = 1;
-
-    arduino->write(frameId);
-    arduino->write(deviceId);
-    arduino->write(PROTOCOL_FRAME_TYPE_DATA);
-    arduino->write(command);
-    // payload
-    arduino->write(10);
-    arduino->write(11);
-    arduino->write(12);
-    arduino->sendData();
-    // sleep(2);
-
-    // int p = 0;
-    // while (p < 20)
-    // {
-    //     if (arduino->receiveData() == RCV_RESP_VALID)
-    //         break;
-    //     p++;
-    // }
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    arduino->receiveData();
-    EXPECT_EQ(3, arduino->receivedDataSize());
-    EXPECT_EQ(frameId, arduino->read(0));
-    EXPECT_EQ(PROTOCOL_FRAME_TYPE_ACK, arduino->read(1));
-    EXPECT_EQ(1, arduino->read(2)); // ack
 
     delete arduino;
 }

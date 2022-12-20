@@ -6,7 +6,7 @@
 #include "../../lib/include/imu_data.h"
 #include "../../lib/include/crawler_hal.h"
 
-//#define DEVICE "/dev/ttyACM0"
+// #define DEVICE "/dev/ttyACM0"
 #define DEVICE "/dev/ttyUSB0"
 
 void printRawData(const char *sensorName, ResponseData *p)
@@ -23,46 +23,19 @@ void printRawData(const char *sensorName, ResponseData *p)
     printf(" ]\n");
 }
 
-void dummySensorData(ResponseData *p)
+void dummySensorData(char *p)
 {
-    if (p->deviceId != SENSOR_DUMMY)
-    {
-        printf("error, shouldn't have called for another deviceId");
-        exit(1);
-    }
-    printRawData("DUMMY SENSOR", p);
+    printf("DUMMY SENSOR\n");
 }
 
-void imuSensorData(ResponseData *p)
+void imuSensorData(IMUData *data)
 {
-    if (p->deviceId != SENSOR_IMU)
-    {
-        printf("error, shouldn't have called for another deviceId");
-        exit(1);
-    }
-
-    printf("ok 1\n");
-    printRawData("IMU SENSOR", p);
-
-    IMUData *data = CrawlerHAL::parseData_IMU(p);
-
     printf("IMU Data:\n");
     printf("acc [%f, %f, %f]\n", data->accX, data->accY, data->accZ);
     printf("gyro [%f, %f, %f]\n", data->gyroX, data->gyroY, data->gyroZ);
 }
-void gpsSensorData(ResponseData *p)
+void gpsSensorData(GPSData *data)
 {
-    if (p->deviceId != SENSOR_GPS)
-    {
-        printf("error, shouldn't have called for another deviceId");
-        exit(1);
-    }
-
-    printf("ok 1\n");
-    printRawData("GPS SENSOR", p);
-
-    // printf("LAT = %f\n", readF(p, 1));
-    // printf("LON = %f\n", readF(p, 5));
 }
 int main(int argc, char **argv)
 {
@@ -72,14 +45,29 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    CrawlerHAL hal(DEVICE);
+    CrawlerHAL::initialize(DEVICE);
+
+    CrawlerHAL *hal = CrawlerHAL::getInstance();
     bool run = true;
     bool stop = false;
     bool lastAck = false;
 
-    hal.addCallbackHandler(SENSOR_DUMMY, dummySensorData);
-    hal.addCallbackHandler(SENSOR_IMU, imuSensorData);
-    hal.addCallbackHandler(SENSOR_GPS, gpsSensorData);
+    // hal->addDummySensorCallbackHandler(dummySensorData);
+    std::function<void(GPSData *)> f = [=](GPSData *data)
+    {
+        printf("GPS Data:\n");
+        printf ("%s\n", data->toJson().c_str());
+    };
+
+    std::function<void(IMUData *)> fIMU = [=](IMUData *data)
+    {
+        printf("IMU Data:\n");
+        printf("acc [%f, %f, %f]\n", data->accX, data->accY, data->accZ);
+        printf("gyro [%f, %f, %f]\n", data->gyroX, data->gyroY, data->gyroZ);
+    };
+
+    hal->addIMUCallbackHandler(fIMU);
+    hal->addGPSCallbackHandler(f);
 
     // if (!hal.IMUSetSamplingPeriod(5000))
     //     printf ("error setting sample period to 2000\n");
@@ -97,8 +85,8 @@ int main(int argc, char **argv)
     //     sleep(1);
     // }
 
-        // if (!hal.IMUCalibrate())
-        //     printf("error callibrating\n");
+    // if (!hal.IMUCalibrate())
+    //     printf("error callibrating\n");
 
     while (1)
     {

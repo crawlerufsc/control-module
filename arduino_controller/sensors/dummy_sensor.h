@@ -25,7 +25,7 @@ public:
 
     void initialize() override
     {
-        setSamplingPeriod(1000);
+        setSamplingPeriod(5000);
         active = false;
     }
 

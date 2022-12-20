@@ -1,23 +1,39 @@
 #ifndef _GPS_SENSOR_DEVICE_H
 #define _GPS_SENSOR_DEVICE_H
 
-#include <SoftwareSerial.h>
+#include <Arduino.h>
 #include <TinyGPS.h>
 
 class GPSS : public Sensor
 {
 private:
-    SoftwareSerial *ss;
     TinyGPS gps;
+
+    // bool readGpsData()
+    // {
+    //     bool valid = false;
+    //     while (Serial1.available())
+    //     {
+    //         char data = Serial1.read();
+    //         Serial.print("gps data: ");
+    //         Serial.println(data);
+    //         if (gps.encode(data))
+    //             valid = true;
+    //         delay(20);
+    //     }
+    //     return valid;
+    // }
 
     bool readGpsData()
     {
         bool valid = false;
-        while (ss->available())
+        while (Serial1.available())
         {
-            gps.encode(ss->read());
-            delay(20);
+            valid = true;
+            char ch = Serial1.read();
+            gps.encode(ch);
         }
+
         return valid;
     }
 
@@ -47,10 +63,14 @@ protected:
         }
 
         comm.write(getDeviceCode());
-        comm.write(8);
+        comm.write(25);
         comm.writeF(lat);
         comm.writeF(lon);
-
+        comm.writeL(age == TinyGPS::GPS_INVALID_AGE ? 0 : age);
+        comm.write(gps.satellites() == TinyGPS::GPS_INVALID_SATELLITES ? 0 : gps.satellites());
+        comm.writeL(gps.hdop() == TinyGPS::GPS_INVALID_HDOP ? 0 : gps.hdop());
+        comm.writeL(gps.altitude() == TinyGPS::GPS_INVALID_ALTITUDE ? 0 : gps.altitude());
+        comm.writeF(gps.speed() == TinyGPS::GPS_INVALID_SPEED ? 0 : gps.f_speed_kmph());
         return true;
     }
 
@@ -64,10 +84,10 @@ public:
     void initialize() override
     {
         setSamplingPeriod(1000);
-        ss = new SoftwareSerial(4, 3);
-        ss->begin(4800);
-        ss->listen();
-
+        Serial1.begin(4800);
+        while (!Serial1)
+        {
+        }
     }
 
     bool readCommand(AsyncCommunication &comm) override

@@ -21,13 +21,17 @@ find_package_handle_standard_args(wiringPi DEFAULT_MSG WIRINGPI_LIBRARIES WIRING
 SET(TARGET_H
     ../../serialcomm/serial_comm_pi.h
     ../../serialcomm/serial_sync_link.h
-    ../../hal/crawler_hal.h
+    ../../lib/include/crawler_hal.h
+    ../../lib/include/gps_data.h
+    ../../lib/include/imu_data.h
 )
 
 add_executable(
     sensortest
     crawler_sensors_test.cpp
     ../../lib/crawler_hal.cpp
+    ../../lib/gps_data.cpp
+    ../../lib/imu_data.cpp
     ../../serialcomm/serial_comm_pi.cpp
     ../../serialcomm/serial_link.cpp    
 )

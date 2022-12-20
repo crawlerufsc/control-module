@@ -2,20 +2,20 @@
 #define _SERIAL_LINK_H
 
 #include "serial_comm_pi.h"
-#include "../lib/include/crawler_hal.h"
+#include "../lib/include/comm_types.h"
 #include <cstdarg>
 #include <thread>
 #include <queue>
 #include <condition_variable>
 #include <map>
+#include <vector>
 #include <functional>
+#include <tuple>
 
 #define ACK_TIMEOUT_ms 100
 #define REQUEST_TIMEOUT_ms 1000
 
-//#define DEBUG 1
-
-typedef unsigned char uchar;
+// #define DEBUG 1
 
 class AckWait
 {
@@ -57,15 +57,21 @@ public:
     }
 };
 
+typedef struct SerialLinkResponseCallback
+{
+    uchar id;
+    std::function<void(ResponseData *)> callback;
+} SerialLinkResponseCallback;
 
-class SerialLink: public ISerialLink
+class SerialLink : public ISerialLink
 {
 private:
     ISerialCommunication *comm;
     std::thread *rcvThread;
     std::mutex commMtx;
     AckWait requestAckWaitCheck;
-    std::map<uchar, std::function<void(ResponseData *)>> *handlers;
+
+
     std::queue<ResponseData *> rcvFramesQueue;
 
     bool run;
@@ -79,17 +85,24 @@ private:
     void executeCallbackForMessageData(ResponseData *rcvMsg);
     void printRawData(const char *sensorName, ResponseData *p);
     void processListData(ResponseData *rcvMsg);
-    void processData(ResponseData *rcvMsg);
     uchar *allocBuffer(int size);
     void request(int num_params, uchar *payload);
     bool syncRequest(int num_params, uchar *payload);
+    void clearHandlers();
+    
+protected:
+    std::map<uchar, std::vector<SerialLinkResponseCallback *> *> *handlers;
+    void processData(ResponseData *rcvMsg);
 
 public:
     SerialLink(ISerialCommunication *comm);
     SerialLink(const char *device);
 
     ~SerialLink();
-    void addHandler(uchar deviceId, std::function<void(ResponseData *)> &func) override;
+    void addHandler(uchar deviceId, uchar handlerId, std::function<void(ResponseData *)> &func) override;
+    void removeHandler(uchar deviceId, uchar handlerId) override;
+    
+
     bool syncRequest(uchar deviceId) override;
     bool syncRequest(uchar deviceId, uchar val1) override;
     bool syncRequest(int deviceId, uchar val1, uchar val2) override;

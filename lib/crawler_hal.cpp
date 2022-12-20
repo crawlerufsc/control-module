@@ -119,15 +119,18 @@ bool CrawlerHAL::setSteeringAngle(int angle, bool front, bool back)
     return comm->syncRequest(STEERING_DRIVER, cmd, (unsigned char)angle);
 }
 
-bool CrawlerHAL::setSteeringAngle(int angle) {
+bool CrawlerHAL::setSteeringAngle(int angle)
+{
     return setSteeringAngle(angle, true, true);
 }
 
-bool CrawlerHAL::setSteeringAngleFront(int angle) {
+bool CrawlerHAL::setSteeringAngleFront(int angle)
+{
     return setSteeringAngle(angle, true, false);
 }
 
-bool CrawlerHAL::setSteeringAngleBack(int angle) {
+bool CrawlerHAL::setSteeringAngleBack(int angle)
+{
     return setSteeringAngle(angle, false, true);
 }
 
@@ -148,9 +151,88 @@ bool CrawlerHAL::setDummySensorActive(bool active)
     return comm->syncRequest(SENSOR_DUMMY, p);
 }
 
-void CrawlerHAL::addCallbackHandler(uchar deviceId, std::function<void(ResponseData *)> callback)
+void CrawlerHAL::addDummySensorCallbackHandler(uchar handlerId, std::function<void(char *)> &callback)
 {
-    comm->addHandler(deviceId, callback);
+    if (comm->hasHandler(SENSOR_DUMMY, handlerId))
+        return;
+    std::function<void(ResponseData *)> f = [&callback](ResponseData *val) -> void
+    {
+        callback(val->data);
+    };
+    comm->addHandler(SENSOR_DUMMY, handlerId, f);
+}
+
+void CrawlerHAL::addGPSCallbackHandler(uchar handlerId, std::function<void(GPSData *)> &callback)
+{
+    if (comm->hasHandler(SENSOR_GPS, handlerId))
+        return;
+    std::function<void(ResponseData *)> f = [&callback](ResponseData *val) -> void
+    {
+        GPSData *data = GPSData::decode(val->data);
+        if (data != nullptr)
+            callback(data);
+    };
+    comm->addHandler(SENSOR_GPS, handlerId, f);
+}
+
+void CrawlerHAL::addIMUCallbackHandler(uchar handlerId, std::function<void(IMUData *)> &callback)
+{
+    if (comm->hasHandler(SENSOR_IMU, handlerId))
+        return;
+    std::function<void(ResponseData *)> f = [&callback](ResponseData *val) -> void
+    {
+        IMUData *data = IMUData::decode(val->data);
+        if (data != nullptr)
+            callback(data);
+    };
+    comm->addHandler(SENSOR_IMU, handlerId, f);
+}
+
+void CrawlerHAL::addDummySensorCallbackHandler(std::function<void(char *)> &callback)
+{
+    addDummySensorCallbackHandler(1, callback);
+}
+
+void CrawlerHAL::addGPSCallbackHandler(std::function<void(GPSData *)> &callback)
+{
+    addGPSCallbackHandler(1, callback);
+}
+
+void CrawlerHAL::addIMUCallbackHandler(std::function<void(IMUData *)> &callback)
+{
+    addIMUCallbackHandler(1, callback);
+}
+
+void CrawlerHAL::removeIMUCallbackHandler(uchar handlerId)
+{
+    if (comm->hasHandler(SENSOR_IMU, handlerId))
+        comm->removeHandler(SENSOR_IMU, handlerId);
+}
+void CrawlerHAL::removeGPSCallbackHandler(uchar handlerId)
+{
+    if (comm->hasHandler(SENSOR_GPS, handlerId))
+        comm->removeHandler(SENSOR_GPS, handlerId);
+}
+void CrawlerHAL::removeDummyCallbackHandler(uchar handlerId)
+{
+    if (comm->hasHandler(SENSOR_DUMMY, handlerId))
+        comm->removeHandler(SENSOR_DUMMY, handlerId);
+}
+
+void CrawlerHAL::removeIMUCallbackHandler()
+{
+    if (comm->hasHandler(SENSOR_IMU, 1))
+        comm->removeHandler(SENSOR_IMU, 1);
+}
+void CrawlerHAL::removeGPSCallbackHandler()
+{
+    if (comm->hasHandler(SENSOR_GPS, 1))
+        comm->removeHandler(SENSOR_GPS, 1);
+}
+void CrawlerHAL::removeDummyCallbackHandler()
+{
+    if (comm->hasHandler(SENSOR_DUMMY, 1))
+        comm->removeHandler(SENSOR_DUMMY, 1);
 }
 
 bool CrawlerHAL::IMUCalibrate()
@@ -169,58 +251,6 @@ bool CrawlerHAL::IMUSetSamplingPeriod(uint16_t period)
     return comm->syncRequest(SENSOR_IMU, IMU_SET_SAMPLING_PERIOD, period);
 }
 
-void CrawlerHAL::parseData_IMU(ResponseData *p, IMUData *outp)
-{
-    uint8_t size = p->read(0);
-
-    int pos = 1;
-    if (pos < size)
-        outp->accX = p->readF(pos);
-    pos += 4;
-    if (pos < size)
-        outp->accY = p->readF(pos);
-    pos += 4;
-    if (pos < size)
-        outp->accZ = p->readF(pos);
-    pos += 4;
-    if (pos < size)
-        outp->gyroX = p->readF(pos);
-    pos += 4;
-    if (pos < size)
-        outp->gyroY = p->readF(pos);
-    pos += 4;
-    if (pos < size)
-        outp->gyroZ = p->readF(pos);
-    pos += 4;
-    if (pos < size)
-        outp->angleX = p->readF(pos);
-    pos += 4;
-    if (pos < size)
-        outp->angleY = p->readF(pos);
-    pos += 4;
-    if (pos < size)
-        outp->angleZ = p->readF(pos);
-    pos += 4;
-    if (pos < size)
-        outp->accAngleX = p->readF(pos);
-    pos += 4;
-    if (pos < size)
-        outp->accAngleY = p->readF(pos);
-}
-void CrawlerHAL::parseData_GPS(ResponseData *p, GPSData *outp)
-{
-    uint8_t size = p->read(0);
-
-    int pos = 1;
-
-    if (pos < size)
-        outp->lat = p->readF(pos);
-
-    pos += 4;
-
-    if (pos < size)
-        outp->lon = p->readF(pos);
-}
 bool CrawlerHAL::reset()
 {
 #ifdef DEBUG

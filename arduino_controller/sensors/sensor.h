@@ -33,18 +33,6 @@ protected:
             setTimeoutController();
     }
 
-    bool checkShouldSample()
-    {
-        if (tc == nullptr)
-            return true;
-        return tc->checkTimeout(samplingPeriod);
-    }
-
-    unsigned long lastExecutionTimestamp()
-    {
-        return tc->lastTimestamp();
-    }
-
     virtual bool isCalibrated() = 0;
 
     virtual void calibrationLoop() = 0;
@@ -59,14 +47,26 @@ public:
         destroyTimeoutController();
     }
 
+    bool checkShouldSample()
+    {
+        if (tc == nullptr)
+            return true;
+        return tc->checkTimeout(samplingPeriod);
+    }
+    unsigned long lastExecutionTimestamp()
+    {
+        if (tc == nullptr)
+            return 0;
+            
+        return tc->lastTimestamp();
+    }
     bool publishData(AsyncCommunication &comm)
     {
         if (!checkShouldSample())
             return false;
 
-        if (isCalibrated()) 
+        if (isCalibrated())
             return timedPublishData(comm);
-        
 
         calibrationLoop();
     }

@@ -1,5 +1,5 @@
 #include "timeout_controller.h"
-//#include "serial_comm.h"
+// #include "serial_comm.h"
 #include "usb_serial_comm.h"
 #include "led_controller.h"
 #include "actuators/dummy_device.h"
@@ -35,7 +35,7 @@ UsbSerialCommunication comm;
 TimeoutController tc;
 LedController led(LED_BUILTIN);
 ForwardServo wheelMotor(WHEELDRIVER, 6, 4, 7, 5, 30, 36, 34, 32);
-DoubleSteeringDevice steering (STEERING_DRIVER, 3, 2);
+DoubleSteeringDevice steering(STEERING_DRIVER, 3, 2);
 DummyDevice dummyDevice;
 // SteeringDevice frontSteering(DIRECTION_DRIVER_FRONT, 3);
 // SteeringDevice backSteering(DIRECTION_DRIVER_BACK, 2);
@@ -68,15 +68,25 @@ uint8_t runState_WAIT_USB()
   return STATE_WAIT_USB;
 }
 
+bool publishOther()
+{
+  bool res1 = dummySensor.publishData(comm);
+  bool res2 = gps.publishData(comm);
+  return res1 || res2;
+}
+
 bool readSensors()
 {
-  //IMU has a lot of data 
-  if (imu.publishData(comm)) {
-    return true;
+  if (gps.lastExecutionTimestamp() <= imu.lastExecutionTimestamp())
+  {
+    if (publishOther())
+      return true;
   }
 
-  return dummySensor.publishData(comm) || //
-         gps.publishData(comm);
+  if (imu.publishData(comm))
+    return true;
+
+  return publishOther();
 }
 
 uint8_t runState_IDLE()
@@ -93,8 +103,8 @@ uint8_t runState_IDLE()
     return STATE_PROCESS_RCV;
   }
 
-   if (readSensors())
-     return STATE_PROCESS_SND_SENSOR_DATA;
+  if (readSensors())
+    return STATE_PROCESS_SND_SENSOR_DATA;
 
   return STATE_IDLE;
 }
@@ -117,8 +127,8 @@ uint8_t runState_PROCESS_RCVD()
   }
 
   // actuators
-  ack = dummyDevice.readCommand(comm) ||   //
-        wheelMotor.readCommand(comm) ||    //
+  ack = dummyDevice.readCommand(comm) || //
+        wheelMotor.readCommand(comm) ||  //
         steering.readCommand(comm);
 
   // sensors
@@ -145,7 +155,7 @@ void setup()
   gps.initialize();
 
   state = STATE_RST;
-  //Serial.println("setup() called");
+  // Serial.println("setup() called");
 }
 
 void run_state_machine()
