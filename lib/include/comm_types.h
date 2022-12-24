@@ -39,7 +39,7 @@ class ISerialLink
 public:
     virtual void addHandler(uchar deviceId, uchar handlerId, std::function<void(ResponseData *)> &func) = 0;
     virtual void removeHandler(uchar deviceId, uchar handlerId) = 0;
-    virtual void hasHandler(uchar deviceId, uchar handlerId) = 0;
+    virtual bool hasHandler(uchar deviceId, uchar handlerId) = 0;
     virtual bool syncRequest(uchar deviceId) = 0;
     virtual bool syncRequest(uchar deviceId, uchar val1) = 0;
     virtual bool syncRequest(int deviceId, uchar val1, uchar val2) = 0;

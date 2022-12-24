@@ -244,7 +244,7 @@ void SerialLink::removeHandler(uchar deviceId, uchar handlerId)
     }
 }
 
-void SerialLink::hasHandler(uchar deviceId, uchar handlerId)
+bool SerialLink::hasHandler(uchar deviceId, uchar handlerId)
 {
     if ((*this->handlers).find(deviceId) == (*this->handlers).end())
         return false;
